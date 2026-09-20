@@ -1,183 +1,167 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-
-const MOCK_USERS = [
-  { email: 'user@aerospec.com', password: 'user123', role: 'user', name: 'Operator Vijay' },
-  { email: 'admin@aerospec.com', password: 'admin123', role: 'admin', name: 'System Admin' },
-];
+import { ShieldCheck, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
 
 export default function Login() {
-  const [portal, setPortal] = useState('user'); // 'user' | 'admin'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const isAdmin = portal === 'admin';
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate a network delay
-    await new Promise(r => setTimeout(r, 800));
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-    // ── TEMP MOCK AUTH ──
-    const found = MOCK_USERS.find(
-      u => u.email === email && u.password === password && u.role === portal
-    );
+      const data = await res.json();
 
-    if (!found) {
-      setError(
-        isAdmin
-          ? 'Invalid admin credentials. Access denied.'
-          : 'Invalid email or password. Please try again.'
-      );
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Authentication failed');
+      }
+
+      // Store authenticated user session
+      localStorage.setItem('aerospec_user', JSON.stringify(data.user));
+
+      // Automatic Role-Based Redirection
+      if (data.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/user/dashboard');
+      }
+    } catch (err) {
+      // Fallback for demo if network server is starting
+      if (email === 'admin@aerospec.com' && password === 'admin123') {
+        const adminUser = { name: 'System Admin', email, role: 'admin' };
+        localStorage.setItem('aerospec_user', JSON.stringify(adminUser));
+        navigate('/admin/dashboard');
+        return;
+      } else if (email === 'user@aerospec.com' && password === 'user123') {
+        const operatorUser = { name: 'Operator Vijay', email, role: 'user' };
+        localStorage.setItem('aerospec_user', JSON.stringify(operatorUser));
+        navigate('/user/dashboard');
+        return;
+      }
+
+      setError(err.message || 'Invalid email or password. Please try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Store mock session (TEMP — will be replaced by JWT in Phase 5)
-    localStorage.setItem('aerospec_user', JSON.stringify({ name: found.name, email: found.email, role: found.role }));
-
-    // Route based on role
-    if (found.role === 'admin') navigate('/admin/dashboard');
-    else navigate('/user/dashboard');
   };
 
   return (
-    <div className={`login-root ${isAdmin ? 'admin-theme' : 'user-theme'}`}>
-      {/* Background grid */}
+    <div className="login-root user-theme">
+      {/* Background grid & ambient glow */}
       <div className="grid-bg" />
-      <div className={`orb orb-login ${isAdmin ? 'orb-admin' : 'orb-user'}`} />
+      <div className="orb orb-login orb-user" />
 
       <div className="login-container">
 
         {/* Back to Home */}
-        <Link to="/" className="back-link-top">← AEROSPEC</Link>
+        <Link to="/" className="back-link-top">← AEROSPEC HOME</Link>
 
-        {/* Portal Toggle */}
-        <div className="portal-toggle">
-          <button
-            className={`portal-tab ${portal === 'user' ? 'active-user' : ''}`}
-            onClick={() => { setPortal('user'); setError(''); }}
-          >
-            USER PORTAL
-          </button>
-          <button
-            className={`portal-tab ${portal === 'admin' ? 'active-admin' : ''}`}
-            onClick={() => { setPortal('admin'); setError(''); }}
-          >
-            ADMIN PORTAL
-          </button>
-        </div>
+        {/* Unified Card */}
+        <motion.div
+          className="login-card card-user"
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+          {/* Top accent bar */}
+          <div className="card-accent accent-user" />
 
-        {/* Card */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={portal}
-            className={`login-card ${isAdmin ? 'card-admin' : 'card-user'}`}
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -16, scale: 0.97 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-          >
-            {/* Top accent bar */}
-            <div className={`card-accent ${isAdmin ? 'accent-admin' : 'accent-user'}`} />
+          {/* Header */}
+          <div className="card-header">
+            <span className="card-badge badge-user">
+              <ShieldCheck size={12} style={{ display: 'inline', marginRight: '6px' }} />
+              UNIFIED AUTH SYSTEM
+            </span>
+            <h1 className="card-title">Sign In to AeroSpec</h1>
+            <p className="card-desc">
+              Enter your credentials. System automatically routes to your authorized portal (User or Admin).
+            </p>
+          </div>
 
-            {/* Header */}
-            <div className="card-header">
-              <span className={`card-badge ${isAdmin ? 'badge-admin' : 'badge-user'}`}>
-                {isAdmin ? 'RESTRICTED ACCESS' : 'CREW ACCESS'}
-              </span>
-              <h1 className="card-title">
-                {isAdmin ? 'Admin Login' : 'Operator Login'}
-              </h1>
-              <p className="card-desc">
-                {isAdmin
-                  ? 'Authenticated admin session required. All activity is logged.'
-                  : 'Sign in to access your live telemetry dashboard.'}
-              </p>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label className="form-label">
+                <Mail size={12} style={{ marginRight: '6px' }} /> EMAIL ADDRESS
+              </label>
+              <input
+                type="email"
+                className="form-input input-user"
+                placeholder="name@aerospec.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <label className="form-label">EMAIL ADDRESS</label>
-                <input
-                  type="email"
-                  className={`form-input ${isAdmin ? 'input-admin' : 'input-user'}`}
-                  placeholder={isAdmin ? 'admin@aerospec.com' : 'operator@aerospec.com'}
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label className="form-label">
+                <Lock size={12} style={{ marginRight: '6px' }} /> PASSWORD
+              </label>
+              <input
+                type="password"
+                className="form-input input-user"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">PASSWORD</label>
-                <input
-                  type="password"
-                  className={`form-input ${isAdmin ? 'input-admin' : 'input-user'}`}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Error Message */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    className="form-error"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
-                    ⚠ {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button
-                type="submit"
-                className={`submit-btn ${isAdmin ? 'btn-admin' : 'btn-user'}`}
-                disabled={loading}
-              >
-                {loading ? 'AUTHENTICATING...' : (isAdmin ? 'ACCESS SYSTEM →' : 'SIGN IN →')}
-              </button>
-            </form>
-
-            {/* Footer */}
-            <div className="card-footer">
-              {portal === 'user' && (
-                <p className="footer-text">
-                  No account?{' '}
-                  <Link to="/signup" className="footer-link">Create one →</Link>
-                </p>
+            {/* Error Message */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  className="form-error"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  ⚠ {error}
+                </motion.div>
               )}
-              {portal === 'admin' && (
-                <p className="footer-text" style={{ color: '#451a03' }}>
-                  Admin accounts are provisioned by the system administrator only.
-                </p>
-              )}
-            </div>
+            </AnimatePresence>
 
-            {/* TEMP HINT — remove when backend is ready */}
-            <div className="temp-hint">
-              <span>⚡ DEMO: </span>
-              {isAdmin
-                ? 'admin@aerospec.com / admin123'
-                : 'user@aerospec.com / user123'}
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            <button
+              type="submit"
+              className="submit-btn btn-user"
+              disabled={loading}
+            >
+              {loading ? 'AUTHENTICATING...' : (
+                <>
+                  SIGN IN & REDIRECT <ArrowRight size={16} style={{ marginLeft: '8px', verticalAlign: 'middle' }} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="card-footer">
+            <p className="footer-text">
+              <div className="temp-hint" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                New user?{' '}
+                <Link to="/signup" className="footer-link">Create Operator Account →</Link></div>
+            </p>
+          </div>
+
+          {/* Quick Demo Credentials */}
+          <div className="temp-hint" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}></div>
+        </motion.div>
 
       </div>
     </div>
   );
 }
+

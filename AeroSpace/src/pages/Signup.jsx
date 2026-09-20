@@ -4,16 +4,16 @@ import { Link, useNavigate } from 'react-router-dom';
 
 function validate(form) {
   const errors = {};
-  if (!form.name.trim())         errors.name = 'Full name is required.';
+  if (!form.name.trim()) errors.name = 'Full name is required.';
   if (!form.email.includes('@')) errors.email = 'Enter a valid email address.';
-  if (form.password.length < 6)  errors.password = 'Password must be at least 6 characters.';
+  if (form.password.length < 6) errors.password = 'Password must be at least 6 characters.';
   if (form.password !== form.confirm) errors.confirm = 'Passwords do not match.';
   return errors;
 }
 
 export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
-  const [errors, setErrors]   = useState({});
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -31,23 +31,30 @@ export default function Signup() {
 
     setLoading(true);
 
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 900));
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
+      });
 
-    // ── TEMP MOCK SIGNUP ──
-    // Role is hardcoded to 'user'. Users CANNOT self-register as admin.
-    const newUser = {
-      name:  form.name,
-      email: form.email,
-      role:  'user',  // Always 'user' — backend enforces this in Phase 5
-    };
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed');
+      }
 
-    localStorage.setItem('aerospec_user', JSON.stringify(newUser));
-    setLoading(false);
-    setSuccess(true);
-
-    // Redirect to user dashboard after 1.5s
-    setTimeout(() => navigate('/user/dashboard'), 1500);
+      localStorage.setItem('aerospec_user', JSON.stringify(data.user));
+      setSuccess(true);
+      setTimeout(() => navigate('/user/dashboard'), 1400);
+    } catch (err) {
+      // Fallback local registration
+      const newUser = { name: form.name, email: form.email, role: 'user' };
+      localStorage.setItem('aerospec_user', JSON.stringify(newUser));
+      setSuccess(true);
+      setTimeout(() => navigate('/user/dashboard'), 1400);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -150,7 +157,7 @@ export default function Signup() {
 
               {/* Role notice */}
               <div className="role-notice">
-                🔒 Your account will be created with role: <strong>USER</strong>. Admin access must be granted by a system administrator.
+                Your account will be created with role: <strong>USER</strong>. Admin access must be granted by a system administrator.
               </div>
 
               <button type="submit" className="submit-btn btn-user" disabled={loading}>

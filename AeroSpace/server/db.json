@@ -1,0 +1,318 @@
+{
+  "users": [
+    {
+      "id": "usr_1",
+      "name": "System Admin",
+      "email": "admin@aerospec.com",
+      "password": "admin123",
+      "role": "admin",
+      "status": "Active",
+      "createdAt": "2026-01-15"
+    },
+    {
+      "id": "usr_2",
+      "name": "Operator Vijay",
+      "email": "user@aerospec.com",
+      "password": "user123",
+      "role": "user",
+      "status": "Active",
+      "createdAt": "2026-02-01"
+    },
+    {
+      "id": "usr_3",
+      "name": "Telemetry Engineer Maya",
+      "email": "maya@aerospec.com",
+      "password": "maya123",
+      "role": "user",
+      "status": "Active",
+      "createdAt": "2026-02-10"
+    },
+    {
+      "id": "usr_4",
+      "name": "Flight Specialist Alex",
+      "email": "alex@aerospec.com",
+      "password": "alex123",
+      "role": "user",
+      "status": "Active",
+      "createdAt": "2026-03-05"
+    }
+  ],
+  "telemetry": {
+    "podId": "AERO-POD-09",
+    "status": "ONLINE",
+    "frequency": "440.92 MHz",
+    "rssi": "-62 dBm",
+    "snr": "18.4 dB",
+    "battery": "94%",
+    "latitude": 28.6139,
+    "longitude": 77.209,
+    "altitude": "12,450 ft",
+    "speed": "480 km/h",
+    "temperature": "22.4 °C",
+    "uptime": "14h 32m"
+  },
+  "reports": [
+    {
+      "id": "REP-1049",
+      "title": "Orbital Pod Signal Telemetry Log",
+      "date": "2026-09-18",
+      "type": "RF Telemetry",
+      "size": "2.4 MB",
+      "status": "Verified",
+      "downloadUrl": "#"
+    },
+    {
+      "id": "REP-1048",
+      "title": "Atmospheric Sensor Calibration Diagnostic",
+      "date": "2026-09-17",
+      "type": "Diagnostic",
+      "size": "1.8 MB",
+      "status": "Verified",
+      "downloadUrl": "#"
+    },
+    {
+      "id": "REP-1047",
+      "title": "Transponder Frequency Audit Report",
+      "date": "2026-09-15",
+      "type": "Frequency",
+      "size": "4.1 MB",
+      "status": "Archive",
+      "downloadUrl": "#"
+    },
+    {
+      "id": "REP-1046",
+      "title": "Flight Hardware Thermal Integrity Log",
+      "date": "2026-09-12",
+      "type": "Hardware",
+      "size": "3.0 MB",
+      "status": "Verified",
+      "downloadUrl": "#"
+    }
+  ],
+  "logs": [
+    {
+      "id": "log_1789702799764",
+      "timestamp": "2026-09-18 03:39:59",
+      "type": "AUTH",
+      "event": "User authenticated successfully (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789702794362",
+      "timestamp": "2026-09-18 03:39:54",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702662311",
+      "timestamp": "2026-09-18 03:37:42",
+      "type": "AUTH",
+      "event": "User authenticated successfully (ADMIN)",
+      "user": "admin@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789702633799",
+      "timestamp": "2026-09-18 03:37:13",
+      "type": "AUTH",
+      "event": "Failed login attempt for: admin@aerospec.com",
+      "user": "admin@aerospec.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702287453",
+      "timestamp": "2026-09-18 03:31:27",
+      "type": "AUTH",
+      "event": "User authenticated successfully (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789702270218",
+      "timestamp": "2026-09-18 03:31:10",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospac.com",
+      "user": "user@aerospac.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702259628",
+      "timestamp": "2026-09-18 03:30:59",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospac.com",
+      "user": "user@aerospac.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702240031",
+      "timestamp": "2026-09-18 03:30:40",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702210671",
+      "timestamp": "2026-09-18 03:30:10",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702210451",
+      "timestamp": "2026-09-18 03:30:10",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702210258",
+      "timestamp": "2026-09-18 03:30:10",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702210045",
+      "timestamp": "2026-09-18 03:30:10",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702209844",
+      "timestamp": "2026-09-18 03:30:09",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702209379",
+      "timestamp": "2026-09-18 03:30:09",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702207628",
+      "timestamp": "2026-09-18 03:30:07",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702200098",
+      "timestamp": "2026-09-18 03:30:00",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702165522",
+      "timestamp": "2026-09-18 03:29:25",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702165240",
+      "timestamp": "2026-09-18 03:29:25",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702164827",
+      "timestamp": "2026-09-18 03:29:24",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702162665",
+      "timestamp": "2026-09-18 03:29:22",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702156880",
+      "timestamp": "2026-09-18 03:29:16",
+      "type": "AUTH",
+      "event": "Failed login attempt for: user@aerospace.com",
+      "user": "user@aerospace.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789702131847",
+      "timestamp": "2026-09-18 03:28:51",
+      "type": "AUTH",
+      "event": "User authenticated successfully (ADMIN)",
+      "user": "admin@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789701947614",
+      "timestamp": "2026-09-18 03:25:47",
+      "type": "AUTH",
+      "event": "User authenticated successfully (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789701926014",
+      "timestamp": "2026-09-18 03:25:26",
+      "type": "AUTH",
+      "event": "User authenticated successfully (ADMIN)",
+      "user": "admin@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1",
+      "timestamp": "2026-09-18 08:30:12",
+      "type": "AUTH",
+      "event": "System Admin authenticated via Unified Portal",
+      "user": "admin@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_2",
+      "timestamp": "2026-09-18 08:15:44",
+      "type": "TELEMETRY",
+      "event": "Pod AERO-POD-09 handshake established on 433.92 MHz",
+      "user": "SYSTEM",
+      "severity": "success"
+    },
+    {
+      "id": "log_3",
+      "timestamp": "2026-09-18 07:45:00",
+      "type": "SECURITY",
+      "event": "Failed login attempt from IP 192.168.1.104",
+      "user": "unknown@aerospec.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_4",
+      "timestamp": "2026-09-17 22:10:19",
+      "type": "CONFIG",
+      "event": "RF Signal gain adjusted to +18dBm by Operator Vijay",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    }
+  ]
+}
