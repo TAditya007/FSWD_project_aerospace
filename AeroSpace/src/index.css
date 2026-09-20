@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
+@import "./components/ui/theme.css";
 :root {
   --bg-black: #020208;
   --bg-card: #0a0a12;

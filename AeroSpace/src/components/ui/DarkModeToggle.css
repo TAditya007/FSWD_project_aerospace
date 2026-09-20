@@ -1,0 +1,19 @@
+/* src/components/ui/DarkModeToggle.css */
+.dark-toggle {
+  background: rgba(255, 237, 214, 0.08);
+  border: 1px solid rgba(255, 237, 214, 0.2);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.dark-toggle:hover {
+  background: rgba(255, 237, 214, 0.16);
+  transform: scale(1.05);
+}

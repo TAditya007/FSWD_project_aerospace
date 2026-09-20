@@ -1,0 +1,31 @@
+/* src/components/ui/Button.css */
+.btn {
+  font-family: 'Inter', sans-serif;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.btn-primary {
+  background: hsl(210, 70%, 55%);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-outline);
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface-variant);
+}

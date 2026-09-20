@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import Home          from './pages/Home';
-import Login         from './pages/Login';
-import Signup        from './pages/Signup';
-import UserDashboard from './pages/user/UserDashboard';
+import Home           from './pages/Home';
+import Login          from './pages/Login';
+import Signup         from './pages/Signup';
+import PaymentGateway from './pages/PaymentGateway';
+import UserDashboard  from './pages/user/UserDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -14,9 +15,11 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* ── Public Routes ── */}
-        <Route path="/"       element={<Home />} />
-        <Route path="/login"  element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/"          element={<Home />} />
+        <Route path="/login"     element={<Login />} />
+        <Route path="/signup"    element={<Signup />} />
+        <Route path="/payment"   element={<PaymentGateway />} />
+        <Route path="/checkout"  element={<PaymentGateway />} />
 
         {/* ── User Protected Routes ── */}
         <Route

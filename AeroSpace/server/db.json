@@ -1,5 +1,36 @@
 {
+  "organization": {
+    "id": "org_apex_orbital",
+    "name": "Apex Orbital Systems",
+    "slug": "apex-orbital",
+    "planTier": "orbital_pro",
+    "createdAt": "2026-01-01"
+  },
   "users": [
+    {
+      "id": "usr_admin_2",
+      "orgId": "org_apex_orbital",
+      "name": "System Admin Aditya",
+      "email": "aditya@aerospec.com",
+      "password": "aditya@007",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "interstellar_max",
+      "apiKey": "aero_live_admin_aditya_007",
+      "createdAt": "2026-01-10"
+    },
+    {
+      "id": "usr_admin_1",
+      "orgId": "org_apex_orbital",
+      "name": "System Admin Vijay",
+      "email": "vijay@aerospec.com",
+      "password": "vijay@2007",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "interstellar_max",
+      "apiKey": "aero_live_admin_vijay_2007",
+      "createdAt": "2026-01-10"
+    },
     {
       "id": "usr_1",
       "name": "System Admin",
@@ -16,7 +47,8 @@
       "password": "user123",
       "role": "user",
       "status": "Active",
-      "createdAt": "2026-02-01"
+      "createdAt": "2026-02-01",
+      "planTier": "orbital_pro"
     },
     {
       "id": "usr_3",
@@ -35,22 +67,302 @@
       "role": "user",
       "status": "Active",
       "createdAt": "2026-03-05"
+    },
+    {
+      "id": "usr_1789911811403",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1789911811402@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_2ofo3sfoj1",
+      "createdAt": "2026-09-20"
+    },
+    {
+      "id": "usr_1789911811413",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1789911811411@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_3uptwhb22d",
+      "createdAt": "2026-09-20"
+    },
+    {
+      "id": "usr_1789912268980",
+      "orgId": "org_apex_orbital",
+      "name": "vijay",
+      "email": "bikkinavijay0@gmail.com",
+      "password": "vijay@1007",
+      "role": "user",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_qx5e99yv0y",
+      "createdAt": "2026-09-20"
+    },
+    {
+      "id": "usr_1789912591666",
+      "orgId": "org_apex_orbital",
+      "name": "Commander John",
+      "email": "test@example.com",
+      "password": "password123",
+      "role": "user",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_clui3boc0x",
+      "createdAt": "2026-09-20"
     }
   ],
-  "telemetry": {
-    "podId": "AERO-POD-09",
-    "status": "ONLINE",
-    "frequency": "440.92 MHz",
-    "rssi": "-62 dBm",
-    "snr": "18.4 dB",
-    "battery": "94%",
-    "latitude": 28.6139,
-    "longitude": 77.209,
-    "altitude": "12,450 ft",
-    "speed": "480 km/h",
-    "temperature": "22.4 °C",
-    "uptime": "14h 32m"
-  },
+  "telemetryPods": [
+    {
+      "id": "pod_01",
+      "orgId": "org_apex_orbital",
+      "callsign": "AERO-POD-09",
+      "model": "AEROSPEC Pro",
+      "status": "ONLINE",
+      "frequencyMHz": 440.92,
+      "gainDBm": 18.5,
+      "batteryPct": 94,
+      "rssiDBm": -62,
+      "snrDB": 18.4,
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "altitudeFt": 12450,
+      "speedKmh": 480,
+      "temperatureC": 22.4,
+      "uptime": "14h 32m",
+      "encryption": "AES-256-GCM / AEROSPEC CIPHER",
+      "emergencyOverride": false,
+      "lastPing": "Just now"
+    },
+    {
+      "id": "pod_02",
+      "orgId": "org_apex_orbital",
+      "callsign": "PHOENIX-X1",
+      "model": "AEROSPEC Pro Max",
+      "status": "TRANSMITTING",
+      "frequencyMHz": 442.15,
+      "gainDBm": 21,
+      "batteryPct": 88,
+      "rssiDBm": -54,
+      "snrDB": 22.1,
+      "latitude": 19.076,
+      "longitude": 72.8777,
+      "altitudeFt": 28900,
+      "speedKmh": 820,
+      "temperatureC": -14.2,
+      "uptime": "42h 10m",
+      "encryption": "QUANTUM-GCM-512 / DUAL-BAND",
+      "emergencyOverride": false,
+      "lastPing": "2s ago"
+    },
+    {
+      "id": "pod_03",
+      "orgId": "org_apex_orbital",
+      "callsign": "VALKYRIE-04",
+      "model": "AEROSPEC",
+      "status": "STANDBY",
+      "frequencyMHz": 433.92,
+      "gainDBm": 14,
+      "batteryPct": 100,
+      "rssiDBm": -41,
+      "snrDB": 28,
+      "latitude": 12.9716,
+      "longitude": 77.5946,
+      "altitudeFt": 350,
+      "speedKmh": 0,
+      "temperatureC": 26.8,
+      "uptime": "3h 15m",
+      "encryption": "STANDARD AEROSPEC CIPHER",
+      "emergencyOverride": false,
+      "lastPing": "10s ago"
+    },
+    {
+      "id": "pod_04",
+      "orgId": "org_apex_orbital",
+      "callsign": "STARGAZER-02",
+      "model": "AEROSPEC Pro",
+      "status": "ONLINE",
+      "frequencyMHz": 446,
+      "gainDBm": 16,
+      "batteryPct": 76,
+      "rssiDBm": -78,
+      "snrDB": 14.2,
+      "latitude": 17.385,
+      "longitude": 78.4867,
+      "altitudeFt": 18200,
+      "speedKmh": 610,
+      "temperatureC": 8.5,
+      "uptime": "8h 44m",
+      "encryption": "AES-256-GCM",
+      "emergencyOverride": false,
+      "lastPing": "5s ago"
+    }
+  ],
+  "telemetryReadings": [
+    {
+      "id": "tlm_1",
+      "podId": "pod_01",
+      "time": "17:20",
+      "altitudeFt": 10200,
+      "speedKmh": 420,
+      "rssiDBm": -68,
+      "batteryPct": 98
+    },
+    {
+      "id": "tlm_2",
+      "podId": "pod_01",
+      "time": "17:25",
+      "altitudeFt": 11100,
+      "speedKmh": 450,
+      "rssiDBm": -65,
+      "batteryPct": 97
+    },
+    {
+      "id": "tlm_3",
+      "podId": "pod_01",
+      "time": "17:30",
+      "altitudeFt": 11800,
+      "speedKmh": 470,
+      "rssiDBm": -64,
+      "batteryPct": 96
+    },
+    {
+      "id": "tlm_4",
+      "podId": "pod_01",
+      "time": "17:35",
+      "altitudeFt": 12200,
+      "speedKmh": 480,
+      "rssiDBm": -63,
+      "batteryPct": 95
+    },
+    {
+      "id": "tlm_5",
+      "podId": "pod_01",
+      "time": "17:40",
+      "altitudeFt": 12450,
+      "speedKmh": 480,
+      "rssiDBm": -62,
+      "batteryPct": 94
+    },
+    {
+      "id": "tlm_6",
+      "podId": "pod_02",
+      "time": "17:20",
+      "altitudeFt": 22000,
+      "speedKmh": 750,
+      "rssiDBm": -60,
+      "batteryPct": 92
+    },
+    {
+      "id": "tlm_7",
+      "podId": "pod_02",
+      "time": "17:25",
+      "altitudeFt": 24500,
+      "speedKmh": 780,
+      "rssiDBm": -58,
+      "batteryPct": 91
+    },
+    {
+      "id": "tlm_8",
+      "podId": "pod_02",
+      "time": "17:30",
+      "altitudeFt": 27000,
+      "speedKmh": 800,
+      "rssiDBm": -56,
+      "batteryPct": 90
+    },
+    {
+      "id": "tlm_9",
+      "podId": "pod_02",
+      "time": "17:35",
+      "altitudeFt": 28400,
+      "speedKmh": 815,
+      "rssiDBm": -55,
+      "batteryPct": 89
+    },
+    {
+      "id": "tlm_10",
+      "podId": "pod_02",
+      "time": "17:40",
+      "altitudeFt": 28900,
+      "speedKmh": 820,
+      "rssiDBm": -54,
+      "batteryPct": 88
+    },
+    {
+      "id": "tlm_1789906629379",
+      "timestamp": "2026-09-20T12:17:09.379Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
+    }
+  ],
+  "missions": [
+    {
+      "id": "mis_01",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-ALPHA-07",
+      "title": "Endurance Ring Centrifugal Spin Validation",
+      "targetOrbit": "Low Earth Orbit (LEO) - 420 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01",
+        "pod_02"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-20 06:00:00 UTC",
+      "progressPct": 68
+    },
+    {
+      "id": "mis_02",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-STRATO-03",
+      "title": "Sub-GHz Transceiver Atmospheric Attenuation Survey",
+      "targetOrbit": "Stratospheric Glide (FL600)",
+      "status": "PLANNING",
+      "assignedPods": [
+        "pod_03"
+      ],
+      "leadOperator": "Telemetry Engineer Maya",
+      "launchWindow": "2026-09-22 14:30:00 UTC",
+      "progressPct": 15
+    },
+    {
+      "id": "mis_03",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-VALKYRIE-01",
+      "title": "Orbital Mesh Radio Telemetry Relay",
+      "targetOrbit": "Geostationary Transfer Orbit (GTO)",
+      "status": "COMPLETED",
+      "assignedPods": [
+        "pod_04"
+      ],
+      "leadOperator": "Flight Specialist Alex",
+      "launchWindow": "2026-09-15 08:00:00 UTC",
+      "progressPct": 100
+    },
+    {
+      "id": "mis_1789906629384",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-4",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-21T12:17:09.384Z",
+      "progressPct": 45
+    }
+  ],
   "reports": [
     {
       "id": "REP-1049",
@@ -90,6 +402,342 @@
     }
   ],
   "logs": [
+    {
+      "id": "log_1789917992576",
+      "timestamp": "2026-09-20 15:26:32",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to vijay@aerospec.com",
+      "user": "vijay@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789917992512",
+      "timestamp": "2026-09-20 15:26:32",
+      "type": "AUTH",
+      "event": "User authenticated (ADMIN)",
+      "user": "vijay@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789917942025",
+      "timestamp": "2026-09-20 15:25:42",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to bikkinavijay0@gmail.com",
+      "user": "bikkinavijay0@gmail.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789917736129",
+      "timestamp": "2026-09-20 15:22:16",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789917736114",
+      "timestamp": "2026-09-20 15:22:16",
+      "type": "AUTH",
+      "event": "User authenticated (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789917029874",
+      "timestamp": "2026-09-20 15:10:29",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to vijay@aerospec.com",
+      "user": "vijay@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789917029860",
+      "timestamp": "2026-09-20 15:10:29",
+      "type": "AUTH",
+      "event": "User authenticated (ADMIN)",
+      "user": "vijay@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789917015889",
+      "timestamp": "2026-09-20 15:10:15",
+      "type": "AUTH",
+      "event": "Failed login attempt for: vijay@aerospce.com",
+      "user": "vijay@aerospce.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916987460",
+      "timestamp": "2026-09-20 15:09:47",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916987247",
+      "timestamp": "2026-09-20 15:09:47",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916987074",
+      "timestamp": "2026-09-20 15:09:47",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916986042",
+      "timestamp": "2026-09-20 15:09:46",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916984234",
+      "timestamp": "2026-09-20 15:09:44",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916975712",
+      "timestamp": "2026-09-20 15:09:35",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789916964150",
+      "timestamp": "2026-09-20 15:09:24",
+      "type": "AUTH",
+      "event": "Failed login attempt for: bikkinavijay0@gmil.com",
+      "user": "bikkinavijay0@gmil.com",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789914885149",
+      "timestamp": "2026-09-20 14:34:45",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to bikkinavijay0@gmail.com",
+      "user": "bikkinavijay0@gmail.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789914193886",
+      "timestamp": "2026-09-20 14:23:13",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789914193865",
+      "timestamp": "2026-09-20 14:23:13",
+      "type": "AUTH",
+      "event": "User authenticated (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789913760894",
+      "timestamp": "2026-09-20 14:16:00",
+      "type": "PAYMENT",
+      "event": "Payment verified: User upgraded to Cadet (Free) (₹0/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 486461279842]",
+      "user": "USER",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789913639121",
+      "timestamp": "2026-09-20 14:13:59",
+      "type": "PAYMENT",
+      "event": "Payment verified: User upgraded to Orbital Pro (₹3,999/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 428190382910]",
+      "user": "USER",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789913590077",
+      "timestamp": "2026-09-20 14:13:10",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789912718836",
+      "timestamp": "2026-09-20 13:58:38",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789912718823",
+      "timestamp": "2026-09-20 13:58:38",
+      "type": "AUTH",
+      "event": "User authenticated (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789912591666",
+      "timestamp": "2026-09-20 13:56:31",
+      "type": "AUTH",
+      "event": "User registered: test@example.com (Role: user)",
+      "user": "test@example.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789912561203",
+      "timestamp": "2026-09-20 13:56:01",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to test@example.com",
+      "user": "test@example.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789912268980",
+      "timestamp": "2026-09-20 13:51:08",
+      "type": "AUTH",
+      "event": "User registered: bikkinavijay0@gmail.com (Role: user)",
+      "user": "bikkinavijay0@gmail.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789912217572",
+      "timestamp": "2026-09-20 13:50:17",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to bikkinavijay0@gmail.com",
+      "user": "bikkinavijay0@gmail.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789911811419",
+      "timestamp": "2026-09-20 13:43:31",
+      "type": "CONFIG",
+      "event": "Subscription purchased: pilot_1789911811402@spacestation.nasa.gov subscribed to Orbital Pro ($49/mo)",
+      "user": "pilot_1789911811402@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789911811416",
+      "timestamp": "2026-09-20 13:43:31",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1789911811411@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789911811413",
+      "timestamp": "2026-09-20 13:43:31",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1789911811411@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789911811408",
+      "timestamp": "2026-09-20 13:43:31",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1789911811402@spacestation.nasa.gov",
+      "user": "pilot_1789911811402@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789911811404",
+      "timestamp": "2026-09-20 13:43:31",
+      "type": "AUTH",
+      "event": "User registered: pilot_1789911811402@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1789911811402@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789906827251",
+      "timestamp": "2026-09-20 12:20:27",
+      "type": "CONFIG",
+      "event": "Tenant plan upgraded to Interstellar Max",
+      "user": "ADMIN",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906824974",
+      "timestamp": "2026-09-20 12:20:24",
+      "type": "CONFIG",
+      "event": "Tenant plan upgraded to Orbital Pro",
+      "user": "ADMIN",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906822133",
+      "timestamp": "2026-09-20 12:20:22",
+      "type": "CONFIG",
+      "event": "Tenant plan upgraded to Cadet (Free)",
+      "user": "ADMIN",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906790683",
+      "timestamp": "2026-09-20 12:19:50",
+      "type": "AUTH",
+      "event": "User authenticated successfully (ADMIN)",
+      "user": "admin@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906752577",
+      "timestamp": "2026-09-20 12:19:12",
+      "type": "AUTH",
+      "event": "User authenticated successfully (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906629393",
+      "timestamp": "2026-09-20 12:17:09",
+      "type": "CONFIG",
+      "event": "Tenant plan upgraded to Orbital Pro",
+      "user": "ADMIN",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906629388",
+      "timestamp": "2026-09-20 12:17:09",
+      "type": "CONFIG",
+      "event": "Tenant plan upgraded to Interstellar Max",
+      "user": "ADMIN",
+      "severity": "success"
+    },
+    {
+      "id": "log_1789906629387",
+      "timestamp": "2026-09-20 12:17:09",
+      "type": "MISSION",
+      "event": "Mission MISSION-OP-4 transitioned to ACTIVE_FLIGHT (45%)",
+      "user": "FLIGHT_CONTROL",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789906629384",
+      "timestamp": "2026-09-20 12:17:09",
+      "type": "MISSION",
+      "event": "Flight mission authorized: MISSION-OP-4 - Automated Test Flight",
+      "user": "Operator Vijay",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789905906786",
+      "timestamp": "2026-09-20 12:05:06",
+      "type": "AUTH",
+      "event": "User authenticated successfully (ADMIN)",
+      "user": "admin@aerospec.com",
+      "severity": "success"
+    },
     {
       "id": "log_1789702799764",
       "timestamp": "2026-09-18 03:39:59",
@@ -313,6 +961,139 @@
       "event": "RF Signal gain adjusted to +18dBm by Operator Vijay",
       "user": "user@aerospec.com",
       "severity": "info"
+    }
+  ],
+  "telemetry": {
+    "podId": "AERO-POD-09",
+    "status": "ONLINE",
+    "frequency": "440.92 MHz",
+    "rssi": "-62 dBm",
+    "snr": "18.4 dB",
+    "battery": "94%",
+    "latitude": 28.6139,
+    "longitude": 77.209,
+    "altitude": "12,450 ft",
+    "speed": "480 km/h",
+    "temperature": "22.4 °C",
+    "uptime": "14h 32m"
+  },
+  "payments": [
+    {
+      "id": "pay_1789917956687_9899",
+      "orderId": "ORD_1789917956687",
+      "userId": "usr_2",
+      "userEmail": "user@aerospec.com",
+      "userName": "Operator Vijay",
+      "planTier": "orbital_pro",
+      "planName": "Orbital Pro",
+      "amount": "₹3,999/mo",
+      "gateway": "UPI_QR",
+      "paymentId": "9866606967@superyes",
+      "utr": "626355058176",
+      "status": "Approved",
+      "createdAt": "2026-09-20 15:25:56",
+      "approvedAt": "2026-09-20 15:26:57",
+      "approvedBy": "vijay@aerospec.com",
+      "notes": "Authorized via OTP sent to bikkinavijay0@gmail.com"
+    },
+    {
+      "id": "pay_1789914888916_8263",
+      "orderId": "ORD_1789914888916",
+      "userId": "usr_op_1",
+      "userEmail": "user@aerospec.com",
+      "userName": "Operator Vijay",
+      "planTier": "orbital_pro",
+      "planName": "Orbital Pro",
+      "amount": "₹3,999/mo",
+      "gateway": "UPI_SCANNER",
+      "paymentId": "9866606967@superyes",
+      "utr": "UPI1789914888906",
+      "status": "Approved",
+      "createdAt": "2026-09-20 14:34:48",
+      "approvedAt": "2026-09-20 14:34:48",
+      "approvedBy": "vijay@aerospec.com",
+      "notes": ""
+    },
+    {
+      "id": "pay_demo_1",
+      "orderId": "ORD_1789914500001",
+      "userId": "usr_op_1",
+      "userEmail": "user@aerospec.com",
+      "userName": "Operator Vijay",
+      "planTier": "orbital_pro",
+      "planName": "Orbital Pro",
+      "amount": "₹3,999/mo",
+      "gateway": "PhonePe",
+      "paymentId": "9866606967@superyes",
+      "utr": "428190382910",
+      "status": "Approved",
+      "createdAt": "2026-09-20 14:15:00",
+      "approvedAt": "2026-09-20 15:11:13",
+      "approvedBy": "vijay@aerospec.com"
+    }
+  ],
+  "admin_actions": [
+    {
+      "id": "act_1789918017779",
+      "adminEmail": "vijay@aerospec.com",
+      "action": "APPROVE_SUBSCRIPTION",
+      "target": "user@aerospec.com",
+      "details": "Approved Orbital Pro (₹3,999/mo) for user@aerospec.com [UTR: 626355058176]",
+      "timestamp": "2026-09-20 15:26:57"
+    },
+    {
+      "id": "act_1789917073674",
+      "adminEmail": "vijay@aerospec.com",
+      "action": "APPROVE_SUBSCRIPTION",
+      "target": "user@aerospec.com",
+      "details": "Approved Orbital Pro (₹3,999/mo) for user@aerospec.com [UTR: 428190382910]",
+      "timestamp": "2026-09-20 15:11:13"
+    },
+    {
+      "id": "act_1789914888946",
+      "adminEmail": "vijay@aerospec.com",
+      "action": "APPROVE_SUBSCRIPTION",
+      "target": "user@aerospec.com",
+      "details": "Approved Orbital Pro (₹3,999/mo) for user@aerospec.com [UTR: UPI1789914888906]",
+      "timestamp": "2026-09-20 14:34:48"
+    }
+  ],
+  "otp_logs": [
+    {
+      "id": "otplog_1789917954661",
+      "email": "bikkinavijay0@gmail.com",
+      "otp": "686455",
+      "type": "PAYMENT_VERIFY",
+      "status": "VERIFIED",
+      "ip": "::1",
+      "timestamp": "2026-09-20 15:25:54"
+    },
+    {
+      "id": "otplog_1789917942029",
+      "email": "bikkinavijay0@gmail.com",
+      "otp": "686455",
+      "type": "PAYMENT_CONFIRMATION",
+      "status": "DISPATCHED",
+      "ip": "::1",
+      "timestamp": "2026-09-20 15:25:42"
+    },
+    {
+      "id": "otplog_1789914888902",
+      "email": "bikkinavijay0@gmail.com",
+      "otp": "997602",
+      "type": "PAYMENT_VERIFY",
+      "status": "VERIFIED",
+      "ip": "::1",
+      "timestamp": "2026-09-20 14:34:48"
+    },
+    {
+      "id": "otplog_1789914885152",
+      "email": "bikkinavijay0@gmail.com",
+      "otp": "997602",
+      "type": "PAYMENT_CONFIRMATION",
+      "status": "DISPATCHED",
+      "ip": "::1",
+      "timestamp": "2026-09-20 14:34:45"
     }
   ]
 }

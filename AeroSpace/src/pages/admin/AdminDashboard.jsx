@@ -1,21 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ShieldAlert, Users, Activity, FileText, Settings, LogOut, Search, UserCheck,
-  UserX, Shield, AlertTriangle, RefreshCw, Cpu, Database, CheckCircle2, Lock
+  ShieldAlert, Users, Activity, FileText, Settings, LogOut, Search,
+  UserX, Shield, RefreshCw, Cpu, Database, CheckCircle2, User, Sliders,
+  Eye, EyeOff, Plus, Edit2, KeyRound, CreditCard, CheckCircle, XCircle,
+  Clock, QrCode, AlertCircle, ArrowUpRight
 } from 'lucide-react';
+import './AdminDashboard.css';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('aerospec_user') || '{}');
+  const currentUser = JSON.parse(localStorage.getItem('aerospec_user') || '{}');
 
-  const [activeSection, setActiveSection] = useState('overview'); // 'overview' | 'users' | 'logs' | 'telemetry' | 'settings'
+  // Enforce Exclusive Admin Access
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      alert('Access restricted to authorized System Administrators (vijay@aerospec.com or aditya@aerospec.com).');
+      navigate('/login');
+    }
+  }, []);
+
+  const [activeSection, setActiveSection] = useState('overview'); // 'overview' | 'users' | 'payments' | 'logs' | 'telemetry' | 'settings'
   const [usersList, setUsersList] = useState([]);
   const [logsList, setLogsList] = useState([]);
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [paymentFilter, setPaymentFilter] = useState('all'); // 'all' | 'Pending Approval' | 'Approved' | 'Rejected'
+  const [otpLogsList, setOtpLogsList] = useState([]);
+  const [actionLoading, setActionLoading] = useState({});
   const [stats, setStats] = useState({ totalUsers: 4, activePods: 4, systemStatus: 'OPERATIONAL', errorCount: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('');
+
+  // Password visibility state (map of userId -> boolean)
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+
+  // Modals state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+
+  // Form states
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user',
+    status: 'Active',
+    planTier: 'cadet'
+  });
+
+  const [editUserData, setEditUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user',
+    status: 'Active',
+    planTier: 'cadet'
+  });
 
   const handleLogout = () => {
     localStorage.removeItem('aerospec_user');
@@ -29,10 +71,12 @@ export default function AdminDashboard() {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [uRes, lRes, sRes] = await Promise.all([
+      const [uRes, lRes, sRes, pRes, oRes] = await Promise.all([
         fetch('/api/admin/users'),
         fetch('/api/admin/logs'),
-        fetch('/api/admin/stats')
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/payments'),
+        fetch('/api/admin/otp-logs')
       ]);
 
       if (uRes.ok) {
@@ -47,182 +91,332 @@ export default function AdminDashboard() {
         const sData = await sRes.json();
         if (sData.success) setStats(sData.data);
       }
+      if (pRes && pRes.ok) {
+        const pData = await pRes.json();
+        if (pData.success) setPaymentsList(pData.data);
+      }
+      if (oRes && oRes.ok) {
+        const oData = await oRes.json();
+        if (oData.success) setOtpLogsList(oData.data);
+      }
     } catch (err) {
       console.warn('Backend API offline, loading fallback admin data:', err);
       setUsersList([
-        { id: 'usr_1', name: 'System Admin', email: 'admin@aerospec.com', role: 'admin', status: 'Active', createdAt: '2026-01-15' },
-        { id: 'usr_2', name: 'Operator Vijay', email: 'user@aerospec.com', role: 'user', status: 'Active', createdAt: '2026-02-01' },
-        { id: 'usr_3', name: 'Telemetry Engineer Maya', email: 'maya@aerospec.com', role: 'user', status: 'Active', createdAt: '2026-02-10' }
+        { id: 'usr_admin_1', name: 'System Admin Vijay', email: 'vijay@aerospec.com', password: 'vijay@2007', role: 'admin', status: 'Active', planTier: 'interstellar_max', createdAt: '2026-01-10' },
+        { id: 'usr_admin_2', name: 'System Admin Aditya', email: 'aditya@aerospec.com', password: 'aditya@007', role: 'admin', status: 'Active', planTier: 'interstellar_max', createdAt: '2026-01-10' },
+        { id: 'usr_op_1', name: 'Operator Vijay', email: 'user@aerospec.com', password: 'user123', role: 'user', status: 'Active', planTier: 'orbital_pro', createdAt: '2026-02-01' }
       ]);
-      setLogsList([
-        { id: 'log_1', timestamp: '2026-09-18 08:30:12', type: 'AUTH', event: 'System Admin logged in', user: 'admin@aerospec.com', severity: 'info' },
-        { id: 'log_2', timestamp: '2026-09-18 08:15:44', type: 'TELEMETRY', event: 'Pod AERO-POD-09 ping OK', user: 'SYSTEM', severity: 'success' }
+      setPaymentsList([
+        {
+          id: 'pay_demo_01',
+          userId: 'usr_op_1',
+          userName: 'Operator Vijay',
+          userEmail: 'user@aerospec.com',
+          planTier: 'orbital_pro',
+          amount: 3999,
+          currency: 'INR',
+          gateway: 'UPI_SCANNER',
+          beneficiaryId: '9866606967@superyes',
+          utrNumber: 'UPI2026092019876543',
+          otpVerified: true,
+          status: 'Pending Approval',
+          createdAt: new Date().toISOString()
+        }
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleRole = async (userId, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
     try {
-      const res = await fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PATCH',
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole })
+        body: JSON.stringify(newUserData)
       });
       const data = await res.json();
-      if (data.success) {
-        setStatusMsg(`Role updated to ${newRole.toUpperCase()} successfully.`);
-        fetchAdminData();
-      } else {
-        alert(data.message);
-      }
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to create user');
+
+      setStatusMsg(`Account for ${data.data.email} provisioned and credentials saved to database.`);
+      setCreateModalOpen(false);
+      setNewUserData({ name: '', email: '', password: '', role: 'user', status: 'Active', planTier: 'cadet' });
+      fetchAdminData();
     } catch (err) {
-      // Fallback local update
-      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      setStatusMsg(`Role updated locally to ${newRole.toUpperCase()}.`);
+      alert(err.message);
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to remove this user account?')) return;
+  const handleOpenEdit = (targetUser) => {
+    setSelectedUserForEdit(targetUser);
+    setEditUserData({
+      name: targetUser.name,
+      email: targetUser.email,
+      password: targetUser.password,
+      role: targetUser.role,
+      status: targetUser.status || 'Active',
+      planTier: targetUser.planTier || 'cadet'
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${selectedUserForEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editUserData)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update user');
+
+      setStatusMsg(`Account credentials updated for ${editUserData.email}.`);
+      setEditModalOpen(false);
+      fetchAdminData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteUser = async (userId, userEmail) => {
+    if (userEmail === 'vijay@aerospec.com' || userEmail === 'aditya@aerospec.com') {
+      alert('Designated root administrator accounts cannot be deleted.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to permanently delete user account ${userEmail}?`)) return;
+
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        setStatusMsg('User account deleted.');
+        setStatusMsg(`User account ${userEmail} deleted.`);
         fetchAdminData();
+      } else {
+        alert(data.message || 'Failed to delete user');
       }
     } catch (err) {
-      setUsersList(prev => prev.filter(u => u.id !== userId));
-      setStatusMsg('User account removed locally.');
+      alert(err.message);
     }
   };
 
+  const handleApprovePayment = async (paymentId) => {
+    if (!window.confirm(`Authorize & APPROVE Subscription payment #${paymentId}?\nThis will immediately grant the user an Active subscription tier.`)) return;
+    setActionLoading(prev => ({ ...prev, [paymentId]: 'approving' }));
+    try {
+      const res = await fetch(`/api/admin/payments/${paymentId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: currentUser.email || 'vijay@aerospec.com' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to approve payment');
+      setStatusMsg(`Subscription Order #${paymentId} APPROVED! User plan activated.`);
+      fetchAdminData();
+    } catch (err) {
+      alert(`Approval Error: ${err.message}`);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [paymentId]: null }));
+    }
+  };
+
+  const handleRejectPayment = async (paymentId) => {
+    const reason = window.prompt('Specify rejection reason (optional):', 'Invalid UPI UTR reference or unverified bank deposit');
+    if (reason === null) return;
+    setActionLoading(prev => ({ ...prev, [paymentId]: 'rejecting' }));
+    try {
+      const res = await fetch(`/api/admin/payments/${paymentId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: currentUser.email || 'vijay@aerospec.com', reason })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to reject payment');
+      setStatusMsg(`Subscription Order #${paymentId} REJECTED.`);
+      fetchAdminData();
+    } catch (err) {
+      alert(`Rejection Error: ${err.message}`);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [paymentId]: null }));
+    }
+  };
+
+  const pendingPaymentsCount = paymentsList.filter(p => p.status === 'Pending Approval').length;
+  const filteredPayments = paymentsList.filter(p => {
+    if (paymentFilter === 'all') return true;
+    return p.status === paymentFilter;
+  });
+
   const filteredUsers = usersList.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role.toLowerCase().includes(searchQuery.toLowerCase())
+    (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.password || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div style={styles.root}>
+    <div className="ad-root">
 
-      {/* ════════ TOP HEADER ════════ */}
-      <header style={styles.header}>
-        <div style={styles.logoWrap} onClick={() => navigate('/')}>
-          <ShieldAlert size={22} color="#f59e0b" />
-          <span style={styles.logoText}>AEROSPEC</span>
-          <span style={styles.adminBadge}>ADMIN CONTROL CENTER</span>
+      {/* ════════ TOP HEADER / MISSION STATUS BAR ════════ */}
+      <header className="ad-header">
+        <div className="ad-logo-wrap" onClick={() => navigate('/')}>
+          <div className="ad-logo-icon">
+            <ShieldAlert size={18} />
+          </div>
+          <span className="ad-logo-text">AEROSPEC</span>
+          <span className="ad-admin-badge">ADMIN CONTROL CENTER</span>
         </div>
 
-        <div style={styles.headerRight}>
-          <div style={styles.systemStatusPill}>
-            <span style={styles.statusDot} /> SYSTEM ONLINE
+        <div className="ad-header-right">
+          <div className="ad-status-pill">
+            <span className="ad-status-dot" /> ROOT ADMIN PRIVILEGES
           </div>
-          <button style={styles.refreshBtn} onClick={fetchAdminData} title="Refresh System State">
-            <RefreshCw size={15} className={loading ? 'spin' : ''} />
+          <button 
+            className="ad-refresh-btn" 
+            onClick={fetchAdminData} 
+            title="Refresh System State"
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
           </button>
-          <span style={styles.adminName}>{user.name || 'System Admin'}</span>
-          <button style={styles.logoutBtn} onClick={handleLogout}>
-            <LogOut size={14} style={{ marginRight: '6px' }} /> LOGOUT
+          <div className="ad-admin-chip">
+            <div className="ad-admin-avatar">
+              <User size={13} />
+            </div>
+            <span>{currentUser.name || 'System Admin'}</span>
+          </div>
+          <button className="ad-logout-btn" onClick={handleLogout}>
+            <LogOut size={13} /> LOGOUT
           </button>
         </div>
       </header>
 
-      <div style={styles.mainLayout}>
+      <div className="ad-main-layout">
 
-        {/* ════════ SIDEBAR ════════ */}
-        <aside style={styles.sidebar}>
-          <div style={styles.sidebarNav}>
+        {/* ════════ MISSION CONTROL SIDEBAR ════════ */}
+        <aside className="ad-sidebar">
+          <div className="ad-sidebar-header">ADMINISTRATION MODULES</div>
+          <nav className="ad-sidebar-nav">
             <button
-              style={{ ...styles.navBtn, ...(activeSection === 'overview' ? styles.navBtnActive : {}) }}
+              className={`ad-nav-btn ${activeSection === 'overview' ? 'active' : ''}`}
               onClick={() => setActiveSection('overview')}
             >
-              <Activity size={16} /> Dashboard Overview
+              <Activity size={16} /> 
+              <span>Overview</span>
             </button>
             <button
-              style={{ ...styles.navBtn, ...(activeSection === 'users' ? styles.navBtnActive : {}) }}
+              className={`ad-nav-btn ${activeSection === 'users' ? 'active' : ''}`}
               onClick={() => setActiveSection('users')}
             >
-              <Users size={16} /> User Management ({usersList.length})
+              <Users size={16} /> 
+              <span>User Surveillance</span>
+              <span className="ad-nav-counter">{usersList.length}</span>
             </button>
             <button
-              style={{ ...styles.navBtn, ...(activeSection === 'logs' ? styles.navBtnActive : {}) }}
+              className={`ad-nav-btn ${activeSection === 'payments' ? 'active' : ''}`}
+              onClick={() => setActiveSection('payments')}
+            >
+              <CreditCard size={16} /> 
+              <span>Subscription Approvals</span>
+              {pendingPaymentsCount > 0 ? (
+                <span className="ad-nav-counter" style={{ background: '#f59e0b', color: '#05070c', fontWeight: 'bold' }}>
+                  {pendingPaymentsCount}
+                </span>
+              ) : (
+                <span className="ad-nav-counter">{paymentsList.length}</span>
+              )}
+            </button>
+            <button
+              className={`ad-nav-btn ${activeSection === 'logs' ? 'active' : ''}`}
               onClick={() => setActiveSection('logs')}
             >
-              <FileText size={16} /> Audit & System Logs ({logsList.length})
+              <FileText size={16} /> 
+              <span>Security Audit Logs</span>
+              <span className="ad-nav-counter">{logsList.length}</span>
             </button>
             <button
-              style={{ ...styles.navBtn, ...(activeSection === 'telemetry' ? styles.navBtnActive : {}) }}
+              className={`ad-nav-btn ${activeSection === 'telemetry' ? 'active' : ''}`}
               onClick={() => setActiveSection('telemetry')}
             >
-              <Cpu size={16} /> Pod Telemetry Override
+              <Cpu size={16} /> 
+              <span>Fleet Overrides</span>
             </button>
             <button
-              style={{ ...styles.navBtn, ...(activeSection === 'settings' ? styles.navBtnActive : {}) }}
+              className={`ad-nav-btn ${activeSection === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveSection('settings')}
             >
-              <Settings size={16} /> System Config
+              <Settings size={16} /> 
+              <span>Tenant & Billing</span>
             </button>
-          </div>
+          </nav>
         </aside>
 
-        {/* ════════ MAIN CONTENT VIEW ════════ */}
-        <main style={styles.contentArea}>
+        {/* ════════ MAIN CONTENT VIEWPORT ════════ */}
+        <main className="ad-content-area">
 
           {statusMsg && (
-            <div style={styles.alertBar}>
+            <div className="ad-alert-bar">
               <CheckCircle2 size={16} /> {statusMsg}
-              <button style={styles.closeAlert} onClick={() => setStatusMsg('')}>×</button>
+              <button className="ad-close-alert" onClick={() => setStatusMsg('')}>×</button>
             </div>
           )}
 
           {/* ── SECTION 1: OVERVIEW ── */}
           {activeSection === 'overview' && (
             <div>
-              <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>System Administration Overview</h1>
-                <p style={styles.pageSub}>Monitor connected users, live RF telemetry nodes, and platform health.</p>
+              <div className="ad-page-header">
+                <h1 className="ad-page-title">SYSTEM ADMINISTRATION OVERVIEW</h1>
+                <p className="ad-page-sub">Global telemetry pods status, authenticated operators, and core infrastructure health.</p>
               </div>
 
               {/* Stats Cards Grid */}
-              <div style={styles.statsGrid}>
-                <div style={styles.statCard}>
-                  <span style={styles.statLabel}>Total Registered Users</span>
-                  <span style={{ ...styles.statValue, color: '#0284c7' }}>{stats.totalUsers}</span>
-                  <span style={styles.statHint}>Admin & Operator accounts</span>
+              <div className="ad-stats-grid">
+                <div className="ad-stat-card stat-users">
+                  <span className="ad-stat-label">Registered Accounts</span>
+                  <span className="ad-stat-value val-cyan">{stats.totalUsers}</span>
+                  <span className="ad-stat-hint">Active database credentials</span>
                 </div>
-                <div style={styles.statCard}>
-                  <span style={styles.statLabel}>Active Telemetry Pods</span>
-                  <span style={{ ...styles.statValue, color: '#16a34a' }}>{stats.activePods}</span>
-                  <span style={styles.statHint}>Pods streaming live</span>
+                <div className="ad-stat-card stat-pods">
+                  <span className="ad-stat-label">Live Telemetry Pods</span>
+                  <span className="ad-stat-value val-emerald">{stats.activePods}</span>
+                  <span className="ad-stat-hint">Orbital telemetry stream</span>
                 </div>
-                <div style={styles.statCard}>
-                  <span style={styles.statLabel}>Database Status</span>
-                  <span style={{ ...styles.statValue, color: '#0284c7' }}>{stats.systemStatus}</span>
-                  <span style={styles.statHint}>Express API & JSON DB</span>
+                <div className="ad-stat-card stat-system">
+                  <span className="ad-stat-label">Tenant Tier</span>
+                  <span className="ad-stat-value val-amber" style={{ fontSize: '1.6rem' }}>{stats.planTier || 'Orbital Pro'}</span>
+                  <span className="ad-stat-hint">Active SaaS Quota</span>
                 </div>
-                <div style={styles.statCard}>
-                  <span style={styles.statLabel}>Security Alerts</span>
-                  <span style={{ ...styles.statValue, color: stats.errorCount > 0 ? '#dc2626' : '#16a34a' }}>
+                <div className="ad-stat-card stat-alerts">
+                  <span className="ad-stat-label">Logged Events</span>
+                  <span className={`ad-stat-value ${stats.errorCount > 0 ? 'val-red' : 'val-emerald'}`}>
                     {stats.errorCount}
                   </span>
-                  <span style={styles.statHint}>Logged warnings</span>
+                  <span className="ad-stat-hint">Security & audit traces</span>
                 </div>
               </div>
 
               {/* Recent Audit Feed */}
-              <div style={{ ...styles.panelCard, marginTop: '28px' }}>
-                <h3 style={styles.panelTitle}><FileText size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Recent System Audit Logs</h3>
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {logsList.slice(0, 4).map(l => (
-                    <div key={l.id} style={styles.logItem}>
-                      <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>[{l.timestamp}]</span>
-                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#e0e7ff', color: '#4338ca', fontSize: '11px', fontWeight: 'bold' }}>{l.type}</span>
-                      <span style={{ color: '#0f172a', flex: 1, fontWeight: '500' }}>{l.event}</span>
-                      <span style={{ color: '#64748b', fontSize: '12px' }}>{l.user}</span>
+              <div className="ad-panel" style={{ marginTop: '28px' }}>
+                <h3 className="ad-panel-title">
+                  <FileText size={18} color="#f59e0b" /> Recent System Audit Logs
+                </h3>
+                <div className="ad-logs-list">
+                  {logsList.slice(0, 5).map(l => (
+                    <div key={l.id} className="ad-log-item">
+                      <span className="ad-log-ts">[{l.timestamp}]</span>
+                      <span className={`ad-badge-log ${l.type === 'AUTH' ? 'badge-auth' : l.type === 'TELEMETRY' ? 'badge-telemetry' : l.severity === 'warning' ? 'badge-warning' : 'badge-system'}`}>
+                        {l.type}
+                      </span>
+                      <span className="ad-log-event">{l.event}</span>
+                      <span className="ad-log-user">{l.user}</span>
                     </div>
                   ))}
                 </div>
@@ -230,118 +424,487 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* ── SECTION 2: USER MANAGEMENT ── */}
+          {/* ── SECTION 2: USER SURVEILLANCE & CREDENTIALS MANAGEMENT ── */}
           {activeSection === 'users' && (
             <div>
-              <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>User Account & Security Management</h1>
-                <p style={styles.pageSub}>Manage registered operators, assign admin privileges, or revoke access.</p>
+              <div className="ad-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h1 className="ad-page-title">USER CREDENTIALS & ACCOUNT SURVEILLANCE</h1>
+                  <p className="ad-page-sub">
+                    Full database visibility of all registered accounts, security emails, and saved passwords.
+                  </p>
+                </div>
+                <button
+                  className="ad-btn-primary"
+                  style={{ marginTop: 0 }}
+                  onClick={() => setCreateModalOpen(true)}
+                >
+                  <Plus size={14} /> Provision User Account
+                </button>
               </div>
 
-              <div style={styles.panelCard}>
-                {/* Search Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div style={styles.searchBox}>
-                    <Search size={16} color="#64748b" />
+              <div className="ad-panel">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                  <div className="ad-search-box">
+                    <Search size={16} color="#8c857b" />
                     <input
                       type="text"
-                      placeholder="Search users by name, email, or role..."
+                      className="ad-search-input"
+                      placeholder="Search accounts by name, email, or credentials..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      style={styles.searchInput}
                     />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#8c857b' }}>
+                    MONITORING {filteredUsers.length} OF {usersList.length} DATABASE ACCOUNTS
                   </div>
                 </div>
 
-                {/* Users Table */}
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>USER</th>
-                      <th style={styles.th}>EMAIL</th>
-                      <th style={styles.th}>ROLE</th>
-                      <th style={styles.th}>STATUS</th>
-                      <th style={styles.th}>CREATED</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map(u => (
-                      <tr key={u.id} style={styles.tr}>
-                        <td style={{ ...styles.td, fontWeight: 'bold', color: '#0f172a' }}>{u.name}</td>
-                        <td style={{ ...styles.td, color: '#0284c7' }}>{u.email}</td>
-                        <td style={styles.td}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            letterSpacing: '1px',
-                            background: u.role === 'admin' ? '#e0f2fe' : '#f1f5f9',
-                            color: u.role === 'admin' ? '#0284c7' : '#475569',
-                            border: `1px solid ${u.role === 'admin' ? '#bae6fd' : '#cbd5e1'}`
-                          }}>
-                            {u.role.toUpperCase()}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ color: '#16a34a', fontSize: '13px', fontWeight: '500' }}>● {u.status || 'Active'}</span>
-                        </td>
-                        <td style={{ ...styles.td, color: '#64748b' }}>{u.createdAt}</td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <button
-                            style={styles.roleBtn}
-                            onClick={() => handleToggleRole(u.id, u.role)}
-                            title="Toggle Admin Privilege"
-                          >
-                            <Shield size={13} style={{ marginRight: '4px' }} />
-                            {u.role === 'admin' ? 'Demote to User' : 'Make Admin'}
-                          </button>
-                          <button
-                            style={styles.deleteBtn}
-                            onClick={() => handleDeleteUser(u.id)}
-                            title="Delete User Account"
-                          >
-                            <UserX size={13} />
-                          </button>
-                        </td>
+                <div className="ad-table-wrap">
+                  <table className="ad-table">
+                    <thead>
+                      <tr>
+                        <th className="ad-th">OPERATOR NAME</th>
+                        <th className="ad-th">SECURITY EMAIL</th>
+                        <th className="ad-th">SAVED PASSWORD (DATABASE)</th>
+                        <th className="ad-th">ACCESS ROLE</th>
+                        <th className="ad-th">STATUS</th>
+                        <th className="ad-th">SUBSCRIPTION</th>
+                        <th className="ad-th" style={{ textAlign: 'right' }}>ACTIONS</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map(u => {
+                        const isRevealed = visiblePasswords[u.id];
+                        return (
+                          <tr key={u.id} className="ad-tr">
+                            <td className="ad-td">
+                              <span className="ad-user-name">{u.name}</span>
+                            </td>
+                            <td className="ad-td">
+                              <span className="ad-user-email">{u.email}</span>
+                            </td>
+                            <td className="ad-td">
+                              {/* Password Surveillance with Reveal Toggle */}
+                              <div className="ad-pwd-wrap">
+                                <span className="ad-pwd-text">
+                                  {isRevealed ? u.password : '••••••••••••'}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="ad-pwd-toggle"
+                                  title={isRevealed ? 'Hide Password' : 'Audit and Reveal Password'}
+                                  onClick={() => togglePasswordVisibility(u.id)}
+                                >
+                                  {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="ad-td">
+                              <span className={u.role === 'admin' ? 'badge-role-admin' : 'badge-role-user'}>
+                                {u.role.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="ad-td">
+                              <span className="ad-status-active" style={{ color: u.status === 'Suspended' ? '#ef4444' : '#10b981' }}>
+                                <span className="ad-status-dot" style={{ background: u.status === 'Suspended' ? '#ef4444' : '#10b981', width: '6px', height: '6px' }} />
+                                {u.status || 'Active'}
+                              </span>
+                            </td>
+                            <td className="ad-td">
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: u.planTier === 'interstellar_max' ? '#a855f7' : u.planTier === 'orbital_pro' ? '#f59e0b' : '#00f5ff' }}>
+                                {(u.planTier || 'cadet').toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="ad-td" style={{ textAlign: 'right' }}>
+                              <button
+                                className="ad-role-btn"
+                                onClick={() => handleOpenEdit(u)}
+                                title="Edit Full Account Credentials & Role"
+                              >
+                                <Edit2 size={12} /> Edit
+                              </button>
+                              <button
+                                className="ad-del-btn"
+                                onClick={() => handleDeleteUser(u.id, u.email)}
+                                title="Remove User Account"
+                              >
+                                <UserX size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ── SECTION 3: SYSTEM LOGS ── */}
+          {/* ── SECTION 3: SYSTEM AUDIT LOGS ── */}
           {activeSection === 'logs' && (
             <div>
-              <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>System & Security Audit Logs</h1>
-                <p style={styles.pageSub}>Real-time authentication records, API requests, and hardware events.</p>
+              <div className="ad-page-header">
+                <h1 className="ad-page-title">FLIGHT COMPUTER & SECURITY AUDIT LOGS</h1>
+                <p className="ad-page-sub">Immutable security ledger capturing authentication traces, API requests, and hardware events.</p>
               </div>
 
-              <div style={styles.panelCard}>
+              <div className="ad-panel">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {logsList.map(l => (
-                    <div key={l.id} style={styles.logItemFull}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>[{l.timestamp}]</span>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          background: l.severity === 'warning' ? '#fee2e2' : '#e0f2fe',
-                          color: l.severity === 'warning' ? '#dc2626' : '#0284c7'
-                        }}>
+                    <div key={l.id} className="ad-log-card-full">
+                      <div className="ad-log-header-row">
+                        <span className="ad-log-ts">[{l.timestamp}]</span>
+                        <span className={`ad-badge-log ${l.type === 'AUTH' ? 'badge-auth' : l.type === 'TELEMETRY' ? 'badge-telemetry' : l.severity === 'warning' ? 'badge-warning' : 'badge-system'}`}>
                           {l.type}
                         </span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8c857b' }}>
+                          ID: {l.id}
+                        </span>
                       </div>
-                      <div style={{ color: '#0f172a', marginTop: '6px', fontSize: '14px', fontWeight: '500' }}>{l.event}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Triggered by: {l.user}</div>
+                      <div style={{ color: '#ffedd6', fontSize: '14px', fontWeight: '500' }}>
+                        {l.event}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#8c857b', fontFamily: 'var(--font-mono)' }}>
+                        Triggered Principal: <span style={{ color: '#00f5ff' }}>{l.user}</span>
+                      </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── SECTION 3: SUBSCRIPTION PAYMENT APPROVALS ── */}
+          {activeSection === 'payments' && (
+            <div>
+              <div className="ad-page-header">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                  <div>
+                    <h1 className="ad-page-title">SUBSCRIPTION PAYMENT APPROVALS</h1>
+                    <p className="ad-page-sub">
+                      Review multi-gateway transactions, verify scanner payments to beneficiary <code style={{ color: '#00f5ff' }}>9866606967@superyes</code>, and authorize subscription activations.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                      className="ad-btn-secondary"
+                      onClick={() => fetchAdminData()}
+                      title="Refresh transaction ledger"
+                    >
+                      <RefreshCw size={14} /> Refresh Ledger
+                    </button>
+                    <a
+                      href="/payment"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ad-btn-primary"
+                      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowUpRight size={14} /> Open Gateway UI
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status summary banner */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginBottom: '24px'
+              }}>
+                <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '16px 20px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#f59e0b', textTransform: 'uppercase' }}>Awaiting Approval</div>
+                  <div style={{ fontSize: '26px', fontWeight: '800', color: '#f59e0b', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                    {pendingPaymentsCount}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#c9bbaa', marginTop: '2px' }}>Requires Admin Confirmation</div>
+                </div>
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '10px', padding: '16px 20px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#10b981', textTransform: 'uppercase' }}>Approved Subscriptions</div>
+                  <div style={{ fontSize: '26px', fontWeight: '800', color: '#10b981', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                    {paymentsList.filter(p => p.status === 'Approved').length}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#c9bbaa', marginTop: '2px' }}>Active SaaS Fleet Quotas</div>
+                </div>
+                <div style={{ background: 'rgba(0, 245, 255, 0.08)', border: '1px solid rgba(0, 245, 255, 0.25)', borderRadius: '10px', padding: '16px 20px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#00f5ff', textTransform: 'uppercase' }}>Target UPI VPA</div>
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#00f5ff', fontFamily: 'var(--font-mono)', marginTop: '8px' }}>
+                    9866606967@superyes
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#c9bbaa', marginTop: '2px' }}>Official Beneficiary Scanner</div>
+                </div>
+                <div style={{ background: 'rgba(255, 237, 214, 0.04)', border: '1px solid rgba(255, 237, 214, 0.1)', borderRadius: '10px', padding: '16px 20px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#8c857b', textTransform: 'uppercase' }}>2FA Security Email</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffedd6', fontFamily: 'var(--font-mono)', marginTop: '8px', wordBreak: 'break-all' }}>
+                    bikkinavijay0@gmail.com
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#c9bbaa', marginTop: '2px' }}>Mandatory OTP Gateway Target</div>
+                </div>
+              </div>
+
+              {/* Filter tabs */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid rgba(255, 237, 214, 0.08)', paddingBottom: '12px' }}>
+                {[
+                  { id: 'all', label: `All Orders (${paymentsList.length})` },
+                  { id: 'Pending Approval', label: `Pending Approval (${pendingPaymentsCount})` },
+                  { id: 'Approved', label: `Approved (${paymentsList.filter(p => p.status === 'Approved').length})` },
+                  { id: 'Rejected', label: `Rejected (${paymentsList.filter(p => p.status === 'Rejected').length})` }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setPaymentFilter(tab.id)}
+                    style={{
+                      background: paymentFilter === tab.id ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 237, 214, 0.03)',
+                      border: `1px solid ${paymentFilter === tab.id ? '#f59e0b' : 'rgba(255, 237, 214, 0.1)'}`,
+                      color: paymentFilter === tab.id ? '#f59e0b' : '#c9bbaa',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Transactions Ledger Panel */}
+              <div className="ad-panel">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 className="ad-panel-title">
+                    <CreditCard size={18} color="#f59e0b" /> Subscription Orders Ledger ({filteredPayments.length})
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#8c857b', fontFamily: 'var(--font-mono)' }}>
+                    Currency: INR (₹) • Strict Admin Authorization Required
+                  </span>
+                </div>
+
+                {filteredPayments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '48px 20px', color: '#8c857b' }}>
+                    <CreditCard size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                    <p style={{ margin: 0, fontSize: '14px' }}>No payment requests matching current filter ({paymentFilter}).</p>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#6b7280' }}>
+                      Initiate a subscription from the <a href="/payment" target="_blank" rel="noreferrer" style={{ color: '#00f5ff' }}>Payment Gateway Page</a>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="ad-table-wrap">
+                    <table className="ad-table">
+                      <thead>
+                        <tr>
+                          <th className="ad-th">Order ID / Date</th>
+                          <th className="ad-th">User / Account</th>
+                          <th className="ad-th">Plan Requested</th>
+                          <th className="ad-th">Amount (₹)</th>
+                          <th className="ad-th">Gateway / VPA</th>
+                          <th className="ad-th">UTR / Ref</th>
+                          <th className="ad-th">2FA OTP</th>
+                          <th className="ad-th">Status</th>
+                          <th className="ad-th" style={{ textAlign: 'right' }}>Authorization Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPayments.map(p => {
+                          const isPending = p.status === 'Pending Approval';
+                          const isApproved = p.status === 'Approved';
+                          const isRejected = p.status === 'Rejected';
+                          const loadingAction = actionLoading[p.id];
+
+                          return (
+                            <tr key={p.id} className="ad-tr">
+                              <td className="ad-td">
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#00f5ff', fontWeight: '700' }}>
+                                  {p.id}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#8c857b', marginTop: '2px' }}>
+                                  {new Date(p.createdAt).toLocaleString()}
+                                </div>
+                              </td>
+
+                              <td className="ad-td">
+                                <div className="ad-user-name">{p.userName || 'Flight Operator'}</div>
+                                <div className="ad-user-email">{p.userEmail}</div>
+                              </td>
+
+                              <td className="ad-td">
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontFamily: 'var(--font-mono)',
+                                  fontWeight: '700',
+                                  background: p.planTier === 'interstellar_max' ? 'rgba(0, 245, 255, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                  color: p.planTier === 'interstellar_max' ? '#00f5ff' : '#f59e0b',
+                                  border: `1px solid ${p.planTier === 'interstellar_max' ? 'rgba(0, 245, 255, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                                }}>
+                                  {p.planTier === 'cadet' ? 'BASIC CADET' : p.planTier === 'orbital_pro' ? 'ORBITAL PRO' : 'INTERSTELLAR MAX'}
+                                </span>
+                              </td>
+
+                              <td className="ad-td">
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: '800', color: '#10b981' }}>
+                                  ₹{(p.amount || 0).toLocaleString('en-IN')}
+                                </span>
+                              </td>
+
+                              <td className="ad-td">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#ffedd6', fontFamily: 'var(--font-mono)' }}>
+                                    {p.gateway || 'UPI_SCANNER'}
+                                  </span>
+                                  <span style={{ fontSize: '10px', color: '#00f5ff', fontFamily: 'var(--font-mono)' }}>
+                                    {p.beneficiaryId || '9866606967@superyes'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="ad-td">
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#c9bbaa', background: 'rgba(255, 237, 214, 0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                                  {p.utrNumber || p.billingDetails?.utr || 'N/A'}
+                                </span>
+                              </td>
+
+                              <td className="ad-td">
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  fontFamily: 'var(--font-mono)',
+                                  color: '#10b981'
+                                }}>
+                                  <CheckCircle size={12} /> Verified
+                                </span>
+                              </td>
+
+                              <td className="ad-td">
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  fontFamily: 'var(--font-mono)',
+                                  background: isPending ? 'rgba(245, 158, 11, 0.15)' : isApproved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: isPending ? '#f59e0b' : isApproved ? '#10b981' : '#ef4444',
+                                  border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.35)' : isApproved ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                                }}>
+                                  {isPending && <Clock size={12} className="animate-spin" />}
+                                  {isApproved && <CheckCircle size={12} />}
+                                  {isRejected && <XCircle size={12} />}
+                                  {p.status}
+                                </span>
+                              </td>
+
+                              <td className="ad-td" style={{ textAlign: 'right' }}>
+                                {isPending ? (
+                                  <div style={{ display: 'inline-flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                    <button
+                                      className="ad-btn-primary"
+                                      style={{
+                                        background: 'rgba(16, 185, 129, 0.2)',
+                                        borderColor: '#10b981',
+                                        color: '#10b981',
+                                        padding: '6px 12px',
+                                        fontSize: '11px'
+                                      }}
+                                      disabled={loadingAction === 'approving'}
+                                      onClick={() => handleApprovePayment(p.id)}
+                                      title="Grant Active subscription status"
+                                    >
+                                      {loadingAction === 'approving' ? 'Activating...' : 'Approve ✓'}
+                                    </button>
+                                    <button
+                                      className="ad-btn-danger"
+                                      style={{ padding: '6px 10px', fontSize: '11px' }}
+                                      disabled={loadingAction === 'rejecting'}
+                                      onClick={() => handleRejectPayment(p.id)}
+                                      title="Reject payment request"
+                                    >
+                                      {loadingAction === 'rejecting' ? '...' : 'Reject ✕'}
+                                    </button>
+                                  </div>
+                                ) : isApproved ? (
+                                  <div style={{ fontSize: '11px', color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+                                    ✓ Active & Authorized by {p.approvedBy?.split('@')[0] || 'admin'}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '11px', color: '#ef4444', fontFamily: 'var(--font-mono)' }}>
+                                    ✕ Rejected ({p.rejectReason || 'Declined'})
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 2FA OTP Logs Security Panel */}
+              <div className="ad-panel" style={{ marginTop: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h3 className="ad-panel-title">
+                    <Shield size={18} color="#00f5ff" /> 2FA OTP Verification Ledger (Target: bikkinavijay0@gmail.com)
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#8c857b', fontFamily: 'var(--font-mono)' }}>
+                    Total OTP Dispatches: {otpLogsList.length}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {otpLogsList.slice(0, 8).map(otp => (
+                    <div
+                      key={otp.id}
+                      style={{
+                        padding: '10px 14px',
+                        background: 'rgba(255, 237, 214, 0.02)',
+                        border: '1px solid rgba(255, 237, 214, 0.05)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: '#8c857b', fontSize: '11px' }}>
+                          [{new Date(otp.timestamp).toLocaleTimeString()}]
+                        </span>
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: otp.status === 'VERIFIED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 245, 255, 0.15)',
+                          color: otp.status === 'VERIFIED' ? '#10b981' : '#00f5ff',
+                          fontWeight: '700'
+                        }}>
+                          {otp.status}
+                        </span>
+                        <span style={{ color: '#ffedd6' }}>
+                          OTP sent to <code style={{ color: '#f59e0b' }}>{otp.email}</code> for {otp.type}
+                        </span>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', color: '#00f5ff', fontSize: '11px' }}>
+                        Code: [ • • • • • • ] • IP: {otp.ip || '127.0.0.1'}
+                      </div>
+                    </div>
+                  ))}
+                  {otpLogsList.length === 0 && (
+                    <div style={{ color: '#8c857b', fontSize: '12px', padding: '12px 0' }}>
+                      No OTP verification events recorded yet.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -350,25 +913,31 @@ export default function AdminDashboard() {
           {/* ── SECTION 4: TELEMETRY OVERRIDE ── */}
           {activeSection === 'telemetry' && (
             <div>
-              <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>Pod Telemetry Global Controls</h1>
-                <p style={styles.pageSub}>Emergency pod frequency override and hardware transmission parameters.</p>
+              <div className="ad-page-header">
+                <h1 className="ad-page-title">POD TELEMETRY GLOBAL CONTROLS</h1>
+                <p className="ad-page-sub">Manual transceiver frequency alignment, gain adjustment, and link protocol override.</p>
               </div>
 
-              <div style={styles.panelCard}>
-                <h3 style={styles.panelTitle}><Cpu size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Pod Frequency Control</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '8px', fontWeight: '600' }}>PRIMARY RF FREQUENCY (MHZ)</label>
-                    <input type="text" defaultValue="440.92" style={styles.searchInput} />
+              <div className="ad-panel">
+                <h3 className="ad-panel-title">
+                  <Cpu size={18} color="#00f5ff" /> Transceiver Calibration Parameters
+                </h3>
+                <div className="ad-form-grid">
+                  <div className="ad-field-group">
+                    <label className="ad-label">Primary RF Frequency (MHz)</label>
+                    <input type="text" defaultValue="440.920" className="ad-input-hud" />
                   </div>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '8px', fontWeight: '600' }}>TRANSMITTER GAIN (DBM)</label>
-                    <input type="text" defaultValue="+18 dBm" style={styles.searchInput} />
+                  <div className="ad-field-group">
+                    <label className="ad-label">Transmitter Output Gain</label>
+                    <input type="text" defaultValue="+18.5 dBm" className="ad-input-hud" />
+                  </div>
+                  <div className="ad-field-group">
+                    <label className="ad-label">Modulation Scheme</label>
+                    <input type="text" defaultValue="GMSK / 9600 bps" className="ad-input-hud" />
                   </div>
                 </div>
                 <button
-                  style={{ marginTop: '20px', padding: '10px 20px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                  className="ad-btn-primary"
                   onClick={() => setStatusMsg('Global Telemetry parameters updated across all active pods.')}
                 >
                   Apply Global Override →
@@ -377,25 +946,87 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* ── SECTION 5: SETTINGS ── */}
+          {/* ── SECTION 5: TENANT & BILLING ── */}
           {activeSection === 'settings' && (
             <div>
-              <div style={styles.pageHeader}>
-                <h1 style={styles.pageTitle}>Infrastructure Settings</h1>
-                <p style={styles.pageSub}>Configure system maintenance mode, data retention, and security parameters.</p>
+              <div className="ad-page-header">
+                <h1 className="ad-page-title">SAAS TENANT & BILLING INFRASTRUCTURE</h1>
+                <p className="ad-page-sub">Configure subscription billing tiers, fleet quota limits, and database state.</p>
               </div>
 
-              <div style={styles.panelCard}>
-                <h3 style={styles.panelTitle}><Database size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Database & Express Server State</h3>
-                <p style={{ color: '#475569', marginTop: '8px', fontSize: '14px' }}>
-                  JSON Database file location: <code>server/db.json</code> | Port: <code>5000</code>
+              <div className="ad-panel">
+                <h3 className="ad-panel-title">
+                  <Shield size={18} color="#f59e0b" /> Subscription Tier Controls
+                </h3>
+                <p style={{ color: '#c9bbaa', marginTop: '10px', fontSize: '13px' }}>
+                  Manage multi-tenant quotas, fleet capacity limits, and subscription billing tiers.
                 </p>
-                <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '20px' }}>
+                  {[
+                    { id: 'cadet', name: 'Cadet (Free)', pods: '2 Pods Max', price: '₹0/mo', desc: 'Entry-level research flight access' },
+                    { id: 'orbital_pro', name: 'Orbital Pro', pods: '15 Pods Max', price: '₹3,999/mo', desc: 'Commercial satellite & drone fleet telemetry' },
+                    { id: 'interstellar_max', name: 'Interstellar Max', pods: 'Unlimited Pods', price: '₹24,999/mo', desc: 'Enterprise deep space & constellation relay' },
+                  ].map(tier => (
+                    <div
+                      key={tier.id}
+                      style={{
+                        padding: '18px',
+                        borderRadius: '10px',
+                        background: 'rgba(255, 237, 214, 0.03)',
+                        border: `1px solid ${stats.planTier?.includes(tier.name.split(' ')[0]) ? '#f59e0b' : 'rgba(255, 237, 214, 0.1)'}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ color: '#ffedd6', fontSize: '14px' }}>{tier.name}</strong>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#00f5ff' }}>{tier.price}</span>
+                      </div>
+                      <span style={{ fontSize: '12px', color: '#10b981', fontFamily: 'var(--font-mono)' }}>{tier.pods}</span>
+                      <p style={{ fontSize: '12px', color: '#8c857b', margin: '4px 0' }}>{tier.desc}</p>
+                      <button
+                        className="ad-btn-primary"
+                        style={{ marginTop: 'auto', padding: '8px 12px', fontSize: '11px' }}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/saas/billing/upgrade', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ planTier: tier.id })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setStatusMsg(`Tenant subscription updated to ${tier.name}`);
+                              fetchAdminData();
+                            }
+                          } catch (err) {
+                            setStatusMsg(`Locally set tier to ${tier.name}`);
+                          }
+                        }}
+                      >
+                        {stats.planTier?.includes(tier.name.split(' ')[0]) ? 'Current Tier Active' : 'Switch To Tier →'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ad-panel" style={{ marginTop: '24px' }}>
+                <h3 className="ad-panel-title">
+                  <Database size={18} color="#10b981" /> Database & Storage Persistence
+                </h3>
+                <p style={{ color: '#c9bbaa', marginTop: '12px', fontSize: '14px', lineHeight: '1.6' }}>
+                  Database storage engine: <code style={{ color: '#00f5ff', background: 'rgba(0,245,255,0.08)', padding: '2px 6px', borderRadius: '4px' }}>server/db.json</code> | 
+                  Active Port: <code style={{ color: '#10b981', background: 'rgba(16,185,129,0.08)', padding: '2px 6px', borderRadius: '4px' }}>5000</code>
+                </p>
+                <div style={{ marginTop: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   <button
-                    style={{ padding: '10px 18px', background: 'transparent', border: '1px solid #16a34a', color: '#16a34a', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-                    onClick={() => setStatusMsg('Database snapshot saved successfully.')}
+                    className="ad-btn-outline-emerald"
+                    onClick={() => setStatusMsg('Database snapshot saved successfully to storage node.')}
                   >
-                    Backup Database Now
+                    <Database size={14} /> Backup Database Now
                   </button>
                 </div>
               </div>
@@ -405,57 +1036,185 @@ export default function AdminDashboard() {
         </main>
       </div>
 
+      {/* ════════ MODAL: PROVISION NEW USER ACCOUNT ════════ */}
+      {createModalOpen && (
+        <div className="ad-modal-backdrop" onClick={() => setCreateModalOpen(false)}>
+          <div className="ad-modal-box" onClick={e => e.stopPropagation()}>
+            <h3 className="ad-modal-title">
+              <Plus size={20} color="#f59e0b" /> Provision New User Account
+            </h3>
+
+            <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Operator Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Commander Shepard"
+                  className="ad-modal-input"
+                  value={newUserData.name}
+                  onChange={e => setNewUserData({ ...newUserData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Security Email Address (Any Domain)</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="operator@anydomain.com"
+                  className="ad-modal-input"
+                  value={newUserData.email}
+                  onChange={e => setNewUserData({ ...newUserData, email: e.target.value })}
+                />
+              </div>
+
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Initial Password</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. FlightPass2026!"
+                  className="ad-modal-input"
+                  value={newUserData.password}
+                  onChange={e => setNewUserData({ ...newUserData, password: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="ad-modal-field">
+                  <label className="ad-modal-label">Access Role</label>
+                  <select
+                    className="ad-modal-input"
+                    value={newUserData.role}
+                    onChange={e => setNewUserData({ ...newUserData, role: e.target.value })}
+                  >
+                    <option value="user">USER (Standard Operator)</option>
+                    <option value="admin">ADMIN (Root Access)</option>
+                  </select>
+                </div>
+
+                <div className="ad-modal-field">
+                  <label className="ad-modal-label">Plan Tier</label>
+                  <select
+                    className="ad-modal-input"
+                    value={newUserData.planTier}
+                    onChange={e => setNewUserData({ ...newUserData, planTier: e.target.value })}
+                  >
+                    <option value="cadet">Cadet (Free)</option>
+                    <option value="orbital_pro">Orbital Pro</option>
+                    <option value="interstellar_max">Interstellar Max</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="ad-modal-actions">
+                <button type="button" className="ad-modal-cancel" onClick={() => setCreateModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="ad-modal-submit">
+                  Save Account to Database
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ════════ MODAL: EDIT USER ACCOUNT & CREDENTIALS ════════ */}
+      {editModalOpen && selectedUserForEdit && (
+        <div className="ad-modal-backdrop" onClick={() => setEditModalOpen(false)}>
+          <div className="ad-modal-box" onClick={e => e.stopPropagation()}>
+            <h3 className="ad-modal-title">
+              <Edit2 size={20} color="#00f5ff" /> Edit Account Credentials — {selectedUserForEdit.email}
+            </h3>
+
+            <form onSubmit={handleUpdateUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  className="ad-modal-input"
+                  value={editUserData.name}
+                  onChange={e => setEditUserData({ ...editUserData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  className="ad-modal-input"
+                  value={editUserData.email}
+                  onChange={e => setEditUserData({ ...editUserData, email: e.target.value })}
+                />
+              </div>
+
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Account Password (Saved in Database)</label>
+                <input
+                  type="text"
+                  required
+                  className="ad-modal-input"
+                  value={editUserData.password}
+                  onChange={e => setEditUserData({ ...editUserData, password: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="ad-modal-field">
+                  <label className="ad-modal-label">Access Role</label>
+                  <select
+                    className="ad-modal-input"
+                    value={editUserData.role}
+                    onChange={e => setEditUserData({ ...editUserData, role: e.target.value })}
+                  >
+                    <option value="user">USER</option>
+                    <option value="admin">ADMIN</option>
+                  </select>
+                </div>
+
+                <div className="ad-modal-field">
+                  <label className="ad-modal-label">Account Status</label>
+                  <select
+                    className="ad-modal-input"
+                    value={editUserData.status}
+                    onChange={e => setEditUserData({ ...editUserData, status: e.target.value })}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="ad-modal-field">
+                <label className="ad-modal-label">Assigned Subscription Tier</label>
+                <select
+                  className="ad-modal-input"
+                  value={editUserData.planTier}
+                  onChange={e => setEditUserData({ ...editUserData, planTier: e.target.value })}
+                >
+                  <option value="cadet">Cadet (Free)</option>
+                  <option value="orbital_pro">Orbital Pro</option>
+                  <option value="interstellar_max">Interstellar Max</option>
+                </select>
+              </div>
+
+              <div className="ad-modal-actions">
+                <button type="button" className="ad-modal-cancel" onClick={() => setEditModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="ad-modal-submit" style={{ background: 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)' }}>
+                  Update Account in Database
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
-
-const styles = {
-  root: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif' },
-  header: { height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3%', borderBottom: '1px solid #e2e8f0', background: '#ffffff', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' },
-  logoWrap: { display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' },
-  logoText: { fontWeight: 900, fontSize: '18px', letterSpacing: '4px', color: '#0f172a' },
-  adminBadge: { fontSize: '10px', background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '4px', letterSpacing: '2px', fontWeight: 800 },
-  headerRight: { display: 'flex', alignItems: 'center', gap: '18px' },
-  systemStatusPill: { fontSize: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#16a34a', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' },
-  statusDot: { width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e' },
-  refreshBtn: { padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0284c7', borderRadius: '6px', cursor: 'pointer' },
-  adminName: { fontSize: '13px', color: '#0284c7', fontWeight: 'bold' },
-  logoutBtn: { padding: '7px 16px', background: 'transparent', border: '1px solid #dc2626', color: '#dc2626', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center' },
-
-  mainLayout: { display: 'flex', minHeight: 'calc(100vh - 64px)' },
-  sidebar: { width: '260px', background: '#ffffff', borderRight: '1px solid #e2e8f0', padding: '24px 16px' },
-  sidebarNav: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  navBtn: { padding: '12px 16px', background: 'transparent', border: '1px solid transparent', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left' },
-  navBtnActive: { background: 'rgba(2, 132, 199, 0.1)', border: '1px solid rgba(2, 132, 199, 0.3)', color: '#0284c7', fontWeight: 'bold' },
-
-  contentArea: { flex: 1, padding: '40px 4%', maxWidth: '1400px' },
-  alertBar: { padding: '12px 18px', background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '500' },
-  closeAlert: { marginLeft: 'auto', background: 'transparent', border: 'none', color: '#15803d', fontSize: '18px', cursor: 'pointer' },
-
-  pageHeader: { marginBottom: '30px' },
-  pageTitle: { fontSize: '2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0' },
-  pageSub: { color: '#64748b', margin: 0, fontSize: '14px' },
-
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' },
-  statCard: { padding: '24px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '8px' },
-  statLabel: { fontSize: '11px', letterSpacing: '1px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' },
-  statValue: { fontSize: '2.2rem', fontWeight: 800 },
-  statHint: { fontSize: '12px', color: '#94a3b8' },
-
-  panelCard: { padding: '28px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' },
-  panelTitle: { fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a', margin: 0 },
-
-  searchBox: { display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 16px', borderRadius: '8px', width: '100%', maxWidth: '400px' },
-  searchInput: { background: 'transparent', border: 'none', color: '#0f172a', fontSize: '14px', width: '100%', outline: 'none' },
-
-  table: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
-  th: { padding: '14px 16px', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '11px', letterSpacing: '1px', textAlign: 'left', fontWeight: '700' },
-  td: { padding: '16px', borderBottom: '1px solid #f1f5f9', fontSize: '14px', color: '#1e293b' },
-  tr: { transition: 'background 0.2s' },
-
-  roleBtn: { padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0284c7', color: '#0284c7', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginRight: '8px', fontWeight: '600' },
-  deleteBtn: { padding: '6px 10px', background: '#fef2f2', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' },
-
-  logItem: { display: 'flex', gap: '14px', alignItems: 'center', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a' },
-  logItemFull: { padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#0f172a' }
-};

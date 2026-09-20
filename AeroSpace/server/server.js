@@ -1,6 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import { db } from './database.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { db, PLAN_LIMITS } from './database.js';
+import { sendOTPEmail } from './mailer.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -8,17 +17,92 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Log incoming requests
+// Request logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// ── Auth Endpoints ──
+// ════════════════════════════════════════════
+// 1. AUTHENTICATION & 2FA EMAIL OTP
+// ════════════════════════════════════════════
 
-// Single Unified Login Endpoint
+// Request Real 2FA OTP to email
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email, type, name } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid email address is required for 2FA.' });
+  }
+
+  try {
+    const otp = db.generateOTP(email, type || 'LOGIN');
+    
+    // Dispatch real email via nodemailer
+    const mailResult = await sendOTPEmail({
+      to: email,
+      otp,
+      type: type || 'LOGIN',
+      name: name || 'Operator'
+    });
+
+    return res.json({
+      success: true,
+      message: `Security 2FA authorization code dispatched to ${email}`,
+      email,
+      deliveryMode: mailResult.mode,
+      previewUrl: mailResult.previewUrl,
+      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+    });
+  } catch (err) {
+    console.error('Error dispatching OTP:', err);
+    return res.status(500).json({ success: false, message: 'Failed to dispatch 2FA email. Please try again.' });
+  }
+});
+
+// Verify 2FA OTP & Authenticate/Signup
+app.post('/api/auth/verify-otp', (req, res) => {
+  const { email, otp, action, name, password } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and 6-digit OTP code are required.' });
+  }
+
+  const result = db.verifyOTP(email, otp);
+  if (!result.success) {
+    return res.status(400).json({ success: false, message: result.message });
+  }
+
+  // If action is SIGNUP, create user account now
+  if (action === 'SIGNUP') {
+    try {
+      const newUser = db.createUser({ name, email, password, role: 'user' });
+      return res.status(201).json({
+        success: true,
+        user: newUser,
+        message: 'Account verified and created successfully!'
+      });
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  }
+
+  // Otherwise action is LOGIN
+  const user = db.getUserByEmail(email);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Account not found.' });
+  }
+
+  const { password: _, ...safeUser } = user;
+  return res.json({
+    success: true,
+    user: safeUser,
+    message: '2FA verification successful!'
+  });
+});
+
+// Login Endpoint
 app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, otp } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required.' });
@@ -33,16 +117,24 @@ app.post('/api/auth/login', (req, res) => {
       user: email,
       severity: 'warning'
     });
-    return res.status(401).json({ success: false, message: 'Invalid credentials. Please check your email and password.' });
+    return res.status(401).json({ success: false, message: 'Invalid credentials. Please verify your email and password.' });
   }
 
   if (user.status === 'Suspended') {
     return res.status(403).json({ success: false, message: 'Account is suspended. Contact system administrator.' });
   }
 
+  // If OTP is provided, verify 2FA
+  if (otp) {
+    const otpResult = db.verifyOTP(email, otp);
+    if (!otpResult.success) {
+      return res.status(400).json({ success: false, message: otpResult.message });
+    }
+  }
+
   db.addLog({
     type: 'AUTH',
-    event: `User authenticated successfully (${user.role.toUpperCase()})`,
+    event: `User authenticated (${user.role.toUpperCase()})`,
     user: user.email,
     severity: 'success'
   });
@@ -55,7 +147,7 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-// Signup Endpoint
+// Signup Endpoint (Any email allowed)
 app.post('/api/auth/signup', (req, res) => {
   const { name, email, password } = req.body;
 
@@ -68,53 +160,237 @@ app.post('/api/auth/signup', (req, res) => {
     return res.status(201).json({
       success: true,
       user: newUser,
-      message: 'Account created successfully! Redirecting...'
+      message: 'Account created successfully!'
     });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
 
-// ── User Telemetry & Reports Endpoints ──
+// ════════════════════════════════════════════
+// 2. PAYMENT OTP & SUBSCRIPTION GATEWAY
+// ════════════════════════════════════════════
 
-app.get('/api/user/telemetry', (req, res) => {
-  const telemetry = db.getTelemetry();
-  return res.json({ success: true, data: telemetry });
+// Request Payment Authorization OTP (Dispatched to bikkinavijay0@gmail.com)
+app.post('/api/payment/send-otp', async (req, res) => {
+  const targetEmail = req.body.email || 'bikkinavijay0@gmail.com';
+  try {
+    const otp = db.generateOTP(targetEmail, 'PAYMENT_CONFIRMATION');
+    
+    // Log OTP dispatch in DB
+    db.logOtp({
+      email: targetEmail,
+      otp,
+      type: 'PAYMENT_CONFIRMATION',
+      status: 'DISPATCHED',
+      ip: req.ip
+    });
+
+    const mailResult = await sendOTPEmail({
+      to: targetEmail,
+      otp,
+      type: 'PAYMENT_CONFIRMATION',
+      name: req.body.name || 'Flight Operator'
+    });
+
+    return res.json({
+      success: true,
+      message: `Payment authorization OTP dispatched to ${targetEmail}`,
+      email: targetEmail,
+      deliveryMode: mailResult.mode,
+      previewUrl: mailResult.previewUrl,
+      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+    });
+  } catch (err) {
+    console.error('Error dispatching payment OTP:', err);
+    return res.status(500).json({ success: false, message: 'Failed to dispatch payment authorization OTP.' });
+  }
 });
 
-app.get('/api/user/reports', (req, res) => {
-  const reports = db.getReports();
-  return res.json({ success: true, data: reports });
+// Verify Payment OTP
+app.post('/api/payment/verify-otp', (req, res) => {
+  const { otp } = req.body;
+  const targetEmail = req.body.email || 'bikkinavijay0@gmail.com';
+
+  if (!otp) {
+    return res.status(400).json({ success: false, message: '6-digit OTP code is required.' });
+  }
+
+  const result = db.verifyOTP(targetEmail, otp);
+  db.logOtp({
+    email: targetEmail,
+    otp,
+    type: 'PAYMENT_VERIFY',
+    status: result.success ? 'VERIFIED' : 'FAILED',
+    ip: req.ip
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ success: false, message: result.message });
+  }
+
+  return res.json({ success: true, message: 'OTP verified. Payment authorization confirmed.' });
 });
 
-// ── Admin Management Endpoints ──
+// Submit Payment Request (Marks status as 'Pending Approval')
+app.post('/api/payment/submit', (req, res) => {
+  const { userId, userEmail, userName, planTier, billingDetails } = req.body;
 
-app.get('/api/admin/users', (req, res) => {
-  const users = db.getAllUsers();
-  return res.json({ success: true, data: users });
-});
-
-app.patch('/api/admin/users/:id/role', (req, res) => {
-  const { id } = req.params;
-  const { role } = req.body;
-
-  if (!['admin', 'user'].includes(role)) {
-    return res.status(400).json({ success: false, message: 'Invalid role specified.' });
+  if (!planTier) {
+    return res.status(400).json({ success: false, message: 'planTier is required.' });
   }
 
   try {
-    const updated = db.updateUserRole(id, role);
+    const payment = db.createPaymentRequest({
+      userId,
+      userEmail,
+      userName,
+      planTier,
+      billingDetails
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: payment,
+      message: 'Payment recorded with status: Pending Approval. Awaiting Administrator Authorization.'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Instant Subscribe (Legacy / Direct)
+app.post('/api/user/subscribe', (req, res) => {
+  const { userId, planTier, billingDetails } = req.body;
+
+  if (!planTier) {
+    return res.status(400).json({ success: false, message: 'planTier is required.' });
+  }
+
+  try {
+    const result = db.userSubscribe(userId, planTier, billingDetails);
+    return res.json({
+      success: true,
+      data: result,
+      message: result.message
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ════════════════════════════════════════════
+// 3. ADMIN SUBSCRIPTION APPROVAL WORKFLOW
+// ════════════════════════════════════════════
+
+// Get all payments for admin review
+app.get('/api/admin/payments', (req, res) => {
+  try {
+    const payments = db.getAllPayments();
+    return res.json({ success: true, count: payments.length, data: payments });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Approve payment request (sets status to 'Approved' and elevates subscription to Active)
+app.post('/api/admin/payments/:id/approve', (req, res) => {
+  const { id } = req.params;
+  const { adminEmail } = req.body;
+
+  try {
+    const result = db.approvePayment(id, adminEmail || 'vijay@aerospec.com');
+    return res.json({
+      success: true,
+      data: result,
+      message: `Subscription payment ${id} successfully APPROVED! User plan elevated to Active.`
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Reject payment request
+app.post('/api/admin/payments/:id/reject', (req, res) => {
+  const { id } = req.params;
+  const { adminEmail, reason } = req.body;
+
+  try {
+    const result = db.rejectPayment(id, adminEmail || 'vijay@aerospec.com', reason);
+    return res.json({
+      success: true,
+      data: result,
+      message: `Subscription payment ${id} marked as REJECTED.`
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Admin view OTP logs
+app.get('/api/admin/otp-logs', (req, res) => {
+  const logs = db.getOtpLogs();
+  return res.json({ success: true, count: logs.length, data: logs });
+});
+
+// ════════════════════════════════════════════
+// 4. ADMIN USER MONITORING & CONTROL
+// ════════════════════════════════════════════
+
+// Return all users with passwords for admin surveillance
+app.get('/api/admin/users', (req, res) => {
+  try {
+    const users = db.getAllUsersForAdmin();
+    return res.json({ success: true, count: users.length, data: users });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin creates user account directly
+app.post('/api/admin/users', (req, res) => {
+  const { name, email, password, role, status, planTier } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Email and password are required.' });
+  }
+
+  try {
+    const created = db.adminCreateUser({ name, email, password, role, status, planTier });
+    return res.status(201).json({ success: true, data: created, message: 'Account provisioned successfully.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Admin modifies ANY user detail (including password)
+app.put('/api/admin/users/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    const updated = db.adminUpdateUser(id, req.body);
+    return res.json({ success: true, data: updated, message: 'Account credentials updated successfully.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Role toggle fallback
+app.patch('/api/admin/users/:id/role', (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+  try {
+    const updated = db.adminUpdateUser(id, { role });
     return res.json({ success: true, user: updated, message: `Role updated to ${role}` });
   } catch (err) {
     return res.status(404).json({ success: false, message: err.message });
   }
 });
 
+// Delete user account
 app.delete('/api/admin/users/:id', (req, res) => {
   const { id } = req.params;
   try {
     db.deleteUser(id);
-    return res.json({ success: true, message: 'User deleted successfully.' });
+    return res.json({ success: true, message: 'User account removed.' });
   } catch (err) {
     return res.status(404).json({ success: false, message: err.message });
   }
@@ -126,17 +402,139 @@ app.get('/api/admin/logs', (req, res) => {
 });
 
 app.get('/api/admin/stats', (req, res) => {
-  const users = db.getAllUsers();
+  const users = db.getAllUsersForAdmin();
   const logs = db.getLogs();
+  const pods = db.getAllPods();
+  const org = db.getOrganization();
   return res.json({
     success: true,
     data: {
       totalUsers: users.length,
-      activePods: 4,
+      activePods: pods.length,
+      planTier: org.planDetails.name,
       systemStatus: 'OPERATIONAL',
       errorCount: logs.filter(l => l.severity === 'danger' || l.severity === 'warning').length
     }
   });
+});
+
+// ════════════════════════════════════════════
+// 4. SAAS FLEET PODS & MISSIONS
+// ════════════════════════════════════════════
+
+app.get('/api/saas/tenant', (req, res) => {
+  try {
+    const org = db.getOrganization();
+    return res.json({ success: true, data: org, availableTiers: PLAN_LIMITS });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/saas/billing/upgrade', (req, res) => {
+  const { planTier } = req.body;
+  try {
+    const updatedOrg = db.updateOrgPlan(planTier);
+    return res.json({
+      success: true,
+      data: updatedOrg,
+      message: `Subscription successfully upgraded to ${updatedOrg.planDetails.name}!`
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/saas/pods', (req, res) => {
+  try {
+    const pods = db.getAllPods();
+    return res.json({ success: true, count: pods.length, data: pods });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/saas/pods', (req, res) => {
+  try {
+    const newPod = db.createPod(req.body);
+    return res.status(201).json({
+      success: true,
+      data: newPod,
+      message: `Telemetry Pod ${newPod.callsign} provisioned successfully.`
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/api/saas/pods/:id', (req, res) => {
+  try {
+    const updated = db.updatePod(req.params.id, req.body);
+    return res.json({ success: true, data: updated, message: 'Pod parameters updated.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/saas/pods/:id', (req, res) => {
+  try {
+    db.deletePod(req.params.id);
+    return res.json({ success: true, message: 'Pod decommissioned from fleet.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/saas/pods/:id/history', (req, res) => {
+  try {
+    const readings = db.getPodReadings(req.params.id);
+    return res.json({ success: true, podId: req.params.id, data: readings });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/saas/missions', (req, res) => {
+  try {
+    const missions = db.getAllMissions();
+    return res.json({ success: true, count: missions.length, data: missions });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/saas/missions', (req, res) => {
+  try {
+    const newMission = db.createMission(req.body);
+    return res.status(201).json({
+      success: true,
+      data: newMission,
+      message: `Mission ${newMission.code} scheduled.`
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/api/saas/missions/:id/status', (req, res) => {
+  const { status, progressPct } = req.body;
+  try {
+    const updated = db.updateMissionStatus(req.params.id, status, progressPct);
+    return res.json({ success: true, data: updated, message: 'Mission status updated.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Legacy User Endpoints
+app.get('/api/user/telemetry', (req, res) => {
+  const telemetry = db.getTelemetry();
+  return res.json({ success: true, data: telemetry });
+});
+
+app.get('/api/user/reports', (req, res) => {
+  const reports = db.getReports();
+  return res.json({ success: true, data: reports });
 });
 
 app.listen(PORT, () => {
