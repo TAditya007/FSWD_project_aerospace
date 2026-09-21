@@ -403,6 +403,46 @@
   ],
   "logs": [
     {
+      "id": "log_1789999353109",
+      "timestamp": "2026-09-21 14:02:33",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for pilot_1789911811402@spacestation.nasa.gov",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789999344290",
+      "timestamp": "2026-09-21 14:02:24",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for pilot_1789911811402@spacestation.nasa.gov",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789999325243",
+      "timestamp": "2026-09-21 14:02:05",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for vijay@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1789999276477",
+      "timestamp": "2026-09-21 14:01:16",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to vijay@aerospec.com",
+      "user": "vijay@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1789999276449",
+      "timestamp": "2026-09-21 14:01:16",
+      "type": "AUTH",
+      "event": "User authenticated (ADMIN)",
+      "user": "vijay@aerospec.com",
+      "severity": "success"
+    },
+    {
       "id": "log_1789917992576",
       "timestamp": "2026-09-20 15:26:32",
       "type": "AUTH",
