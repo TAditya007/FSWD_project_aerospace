@@ -4,12 +4,18 @@ import {
   ShieldAlert, Users, Activity, FileText, Settings, LogOut, Search,
   UserX, Shield, RefreshCw, Cpu, Database, CheckCircle2, User, Sliders,
   Eye, EyeOff, Plus, Edit2, KeyRound, CreditCard, CheckCircle, XCircle,
-  Clock, QrCode, AlertCircle, ArrowUpRight
+  Clock, QrCode, AlertCircle, ArrowUpRight, Palette, Download, FileSpreadsheet,
+  Sparkles, Check, ChevronDown
 } from 'lucide-react';
 import './AdminDashboard.css';
+import { PLAN_CONFIG } from '../../config/plans';
+import { useMissionControl } from '../../components/AuthenticatedLayout';
+import { THEMES, DEFAULT_THEME_ID } from '../../config/themes';
+import DataSheetModal from '../../components/DataSheetModal';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const missionControl = useMissionControl();
   const currentUser = JSON.parse(localStorage.getItem('aerospec_user') || '{}');
 
   // Enforce Exclusive Admin Access
@@ -21,6 +27,18 @@ export default function AdminDashboard() {
   }, []);
 
   const [activeSection, setActiveSection] = useState('overview'); // 'overview' | 'users' | 'payments' | 'logs' | 'telemetry' | 'settings'
+  const [dataSheetModalOpen, setDataSheetModalOpen] = useState(false);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
+
+  const activeThemeId = missionControl?.themeId || currentUser.theme || DEFAULT_THEME_ID;
+  const activeTheme = THEMES[activeThemeId] || THEMES[DEFAULT_THEME_ID];
+
+  const handleSetTheme = (newThemeId) => {
+    if (missionControl?.setThemeId) {
+      missionControl.setThemeId(newThemeId);
+    }
+  };
+
   const [usersList, setUsersList] = useState([]);
   const [logsList, setLogsList] = useState([]);
   const [paymentsList, setPaymentsList] = useState([]);
@@ -113,7 +131,7 @@ export default function AdminDashboard() {
           userName: 'Operator Vijay',
           userEmail: 'user@aerospec.com',
           planTier: 'orbital_pro',
-          amount: 3999,
+          amount: 440,
           currency: 'INR',
           gateway: 'UPI_SCANNER',
           beneficiaryId: '9866606967@superyes',
@@ -279,6 +297,84 @@ export default function AdminDashboard() {
           <div className="ad-status-pill">
             <span className="ad-status-dot" /> ROOT ADMIN PRIVILEGES
           </div>
+
+          {/* Theme Quick Switcher */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="ad-refresh-btn"
+              title="Switch Mission Control Theme"
+              onClick={() => setThemePickerOpen(!themePickerOpen)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 10px', width: 'auto' }}
+            >
+              <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: activeTheme.accent, boxShadow: `0 0 6px ${activeTheme.accent}` }} />
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: activeTheme.accent, fontWeight: 700 }}>
+                {activeTheme.name}
+              </span>
+              <ChevronDown size={12} color={activeTheme.accent} />
+            </button>
+
+            {themePickerOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '38px',
+                  width: '230px',
+                  background: 'rgba(7, 13, 27, 0.96)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(0, 245, 255, 0.3)',
+                  borderRadius: '10px',
+                  padding: '8px',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.8)',
+                  zIndex: 150,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ padding: '6px 10px', fontSize: '11px', color: '#8c857b', borderBottom: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}>
+                  Select Mission Control Theme
+                </div>
+                {Object.values(THEMES).map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => { handleSetTheme(t.id); setThemePickerOpen(false); }}
+                    style={{
+                      background: activeThemeId === t.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+                      border: 'none',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: t.accent }} />
+                      <span style={{ color: activeThemeId === t.id ? t.accent : '#ffedd6', fontWeight: activeThemeId === t.id ? 'bold' : 'normal' }}>
+                        {t.name}
+                      </span>
+                    </div>
+                    {activeThemeId === t.id && <Check size={13} color={t.accent} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Data Sheet Export */}
+          <button
+            className="ad-refresh-btn"
+            title="Download Global Telemetry Data Sheet"
+            onClick={() => setDataSheetModalOpen(true)}
+            style={{ color: '#00f5ff' }}
+          >
+            <Download size={14} />
+          </button>
+
           <button 
             className="ad-refresh-btn" 
             onClick={fetchAdminData} 
@@ -743,7 +839,7 @@ export default function AdminDashboard() {
                                   color: p.planTier === 'interstellar_max' ? '#00f5ff' : '#f59e0b',
                                   border: `1px solid ${p.planTier === 'interstellar_max' ? 'rgba(0, 245, 255, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
                                 }}>
-                                  {p.planTier === 'cadet' ? 'BASIC CADET' : p.planTier === 'orbital_pro' ? 'ORBITAL PRO' : 'INTERSTELLAR MAX'}
+                                  {(PLAN_CONFIG[p.planTier]?.name || p.planTier || 'CADET').toUpperCase()}
                                 </span>
                               </td>
 
@@ -962,12 +1058,8 @@ export default function AdminDashboard() {
                   Manage multi-tenant quotas, fleet capacity limits, and subscription billing tiers.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '20px' }}>
-                  {[
-                    { id: 'cadet', name: 'Cadet (Free)', pods: '2 Pods Max', price: '₹0/mo', desc: 'Entry-level research flight access' },
-                    { id: 'orbital_pro', name: 'Orbital Pro', pods: '15 Pods Max', price: '₹3,999/mo', desc: 'Commercial satellite & drone fleet telemetry' },
-                    { id: 'interstellar_max', name: 'Interstellar Max', pods: 'Unlimited Pods', price: '₹24,999/mo', desc: 'Enterprise deep space & constellation relay' },
-                  ].map(tier => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '20px' }}>
+                  {Object.values(PLAN_CONFIG).map(tier => (
                     <div
                       key={tier.id}
                       style={{
@@ -1101,9 +1193,9 @@ export default function AdminDashboard() {
                     value={newUserData.planTier}
                     onChange={e => setNewUserData({ ...newUserData, planTier: e.target.value })}
                   >
-                    <option value="cadet">Cadet (Free)</option>
-                    <option value="orbital_pro">Orbital Pro</option>
-                    <option value="interstellar_max">Interstellar Max</option>
+                    {Object.values(PLAN_CONFIG).map(tier => (
+                      <option key={tier.id} value={tier.id}>{tier.name} ({tier.price})</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1196,9 +1288,9 @@ export default function AdminDashboard() {
                   value={editUserData.planTier}
                   onChange={e => setEditUserData({ ...editUserData, planTier: e.target.value })}
                 >
-                  <option value="cadet">Cadet (Free)</option>
-                  <option value="orbital_pro">Orbital Pro</option>
-                  <option value="interstellar_max">Interstellar Max</option>
+                  {Object.values(PLAN_CONFIG).map(tier => (
+                    <option key={tier.id} value={tier.id}>{tier.name} ({tier.price})</option>
+                  ))}
                 </select>
               </div>
 
@@ -1214,6 +1306,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* ════════ MODAL: DOWNLOAD MISSION TELEMETRY DATA SHEET ════════ */}
+      <DataSheetModal
+        isOpen={dataSheetModalOpen}
+        onClose={() => setDataSheetModalOpen(false)}
+        user={currentUser}
+        currentUser={currentUser}
+      />
 
     </div>
   );

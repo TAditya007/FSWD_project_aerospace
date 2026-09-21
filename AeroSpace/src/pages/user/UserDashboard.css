@@ -6,8 +6,8 @@
 /* ── ROOT ── */
 .ud-root {
   min-height: 100vh;
-  background: #020208;
-  color: #f8fafc;
+  background: transparent;
+  color: var(--hud-text, #f8fafc);
   font-family: var(--font-sans, 'Inter', sans-serif);
   display: flex;
   flex-direction: column;
@@ -25,10 +25,10 @@
   justify-content: space-between;
   height: 56px;
   padding: 0 24px;
-  background: rgba(2, 2, 8, 0.85);
+  background: var(--hud-panel-bg, rgba(2, 2, 8, 0.85));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 87, 34, 0.15);
+  border-bottom: 1px solid var(--hud-border-glow, rgba(255, 87, 34, 0.15));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 

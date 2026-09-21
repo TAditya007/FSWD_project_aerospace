@@ -7,35 +7,7 @@ import {
 } from 'lucide-react';
 import './PaymentGateway.css';
 
-const TIERS = {
-  cadet: {
-    id: 'cadet',
-    name: 'Basic CADET',
-    price: '₹0/mo',
-    priceNum: 0,
-    pods: '2 Active Pods',
-    retention: '7 Days History',
-    desc: 'Default starter telemetry research tier.'
-  },
-  orbital_pro: {
-    id: 'orbital_pro',
-    name: 'Orbital Pro',
-    price: '₹9/mo',
-    priceNum: 9,
-    pods: '15 Active Pods',
-    retention: '90 Days High-Res History',
-    desc: 'Commercial constellation flight telemetry & sub-GHz transceiver.'
-  },
-  interstellar_max: {
-    id: 'interstellar_max',
-    name: 'Interstellar Max',
-    price: '₹999/mo',
-    priceNum: 999,
-    pods: 'Unlimited Pods',
-    retention: '365 Days Raw Telemetry Archiving',
-    desc: 'Deep space mission control, quantum encryption & 24/7 priority link.'
-  }
-};
+import { PLAN_CONFIG as TIERS } from '../config/plans';
 
 const OFFICIAL_UPI_ID = '9866606967@superyes';
 const OFFICIAL_OTP_EMAIL = 'bikkinavijay0@gmail.com';

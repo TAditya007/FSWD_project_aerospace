@@ -100,6 +100,25 @@ app.post('/api/auth/verify-otp', (req, res) => {
   });
 });
 
+// Current Authenticated User Profile Endpoint
+app.get('/api/auth/me', (req, res) => {
+  const email = req.query.email || req.headers['x-user-email'];
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'User email is required' });
+  }
+
+  const user = db.getUserByEmail(email);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Account not found' });
+  }
+
+  const { password: _, ...safeUser } = user;
+  return res.json({
+    success: true,
+    user: safeUser
+  });
+});
+
 // Login Endpoint
 app.post('/api/auth/login', (req, res) => {
   const { email, password, otp } = req.body;
@@ -164,6 +183,153 @@ app.post('/api/auth/signup', (req, res) => {
     });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ════════════════════════════════════════════
+// 1.1 USER ACCOUNT MANAGEMENT (EMAIL / PASSWORD / THEME / DATASHEET)
+// ════════════════════════════════════════════
+
+// Request OTP to change email (Dispatched to NEW email)
+app.post('/api/user/email/request-otp', async (req, res) => {
+  const { currentEmail, newEmail } = req.body;
+  if (!newEmail || !newEmail.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid new email address is required.' });
+  }
+
+  const existing = db.getUserByEmail(newEmail);
+  if (existing) {
+    return res.status(400).json({ success: false, message: 'An account with this email address already exists.' });
+  }
+
+  try {
+    const otp = db.generateOTP(newEmail, 'EMAIL_CHANGE');
+    const mailResult = await sendOTPEmail({
+      to: newEmail,
+      otp,
+      type: 'EMAIL_CHANGE',
+      name: 'Flight Operator'
+    });
+
+    return res.json({
+      success: true,
+      message: `Security verification code dispatched to ${newEmail}`,
+      deliveryMode: mailResult.mode,
+      previewUrl: mailResult.previewUrl,
+      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to dispatch verification email.' });
+  }
+});
+
+// Verify OTP & Update Email
+app.post('/api/user/email/verify-otp', (req, res) => {
+  const { currentEmail, newEmail, otp } = req.body;
+  if (!currentEmail || !newEmail || !otp) {
+    return res.status(400).json({ success: false, message: 'Current email, new email, and 6-digit OTP code are required.' });
+  }
+
+  const result = db.verifyOTP(newEmail, otp);
+  if (!result.success) {
+    return res.status(400).json({ success: false, message: result.message });
+  }
+
+  try {
+    const updatedUser = db.updateUserEmail(currentEmail, newEmail);
+    return res.json({
+      success: true,
+      user: updatedUser,
+      message: 'Account email updated successfully!'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Request OTP to change password (Dispatched to CURRENT email)
+app.post('/api/user/password/request-otp', async (req, res) => {
+  const { email, currentPassword } = req.body;
+  if (!email || !currentPassword) {
+    return res.status(400).json({ success: false, message: 'Email and current password are required.' });
+  }
+
+  const user = db.getUserByEmail(email);
+  if (!user || user.password !== currentPassword) {
+    return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+  }
+
+  try {
+    const otp = db.generateOTP(email, 'PASSWORD_CHANGE');
+    const mailResult = await sendOTPEmail({
+      to: email,
+      otp,
+      type: 'PASSWORD_CHANGE',
+      name: user.name || 'Flight Operator'
+    });
+
+    return res.json({
+      success: true,
+      message: `2FA security code dispatched to ${email}`,
+      deliveryMode: mailResult.mode,
+      previewUrl: mailResult.previewUrl,
+      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to dispatch 2FA email.' });
+  }
+});
+
+// Verify OTP & Update Password
+app.post('/api/user/password/verify-otp', (req, res) => {
+  const { email, newPassword, otp } = req.body;
+  if (!email || !newPassword || !otp) {
+    return res.status(400).json({ success: false, message: 'Email, new password, and 6-digit OTP are required.' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+  }
+
+  const result = db.verifyOTP(email, otp);
+  if (!result.success) {
+    return res.status(400).json({ success: false, message: result.message });
+  }
+
+  try {
+    db.updateUserPassword(email, newPassword);
+    return res.json({
+      success: true,
+      message: 'Account password updated successfully!'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Update User Theme Preference
+app.post('/api/user/theme', (req, res) => {
+  const { email, theme } = req.body;
+  if (!email || !theme) {
+    return res.status(400).json({ success: false, message: 'Email and theme identifier are required.' });
+  }
+
+  db.updateUserTheme(email, theme);
+  return res.json({ success: true, message: 'Theme preference saved.' });
+});
+
+// Export Sanitized Mission Data Sheet
+app.get('/api/user/datasheet', (req, res) => {
+  const email = req.query.email || req.headers['x-user-email'];
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'User email is required.' });
+  }
+
+  try {
+    const dataSheet = db.getUserDataSheet(email);
+    return res.json({ success: true, data: dataSheet });
+  } catch (err) {
+    return res.status(404).json({ success: false, message: err.message });
   }
 });
 
@@ -421,6 +587,10 @@ app.get('/api/admin/stats', (req, res) => {
 // ════════════════════════════════════════════
 // 4. SAAS FLEET PODS & MISSIONS
 // ════════════════════════════════════════════
+
+app.get('/api/saas/plans', (req, res) => {
+  return res.json({ success: true, data: PLAN_LIMITS });
+});
 
 app.get('/api/saas/tenant', (req, res) => {
   try {

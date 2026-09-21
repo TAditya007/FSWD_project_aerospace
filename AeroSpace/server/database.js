@@ -7,9 +7,10 @@ const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, 'db.json');
 
 export const PLAN_LIMITS = {
-  cadet: { name: 'Cadet (Free)', maxPods: 2, price: '₹0/mo', priceAmount: 0, dataRetentionDays: 7 },
-  orbital_pro: { name: 'Orbital Pro', maxPods: 15, price: '₹3,999/mo', priceAmount: 3999, dataRetentionDays: 90 },
-  interstellar_max: { name: 'Interstellar Max', maxPods: 999, price: '₹24,999/mo', priceAmount: 24999, dataRetentionDays: 365 }
+  cadet: { name: 'Cadet (Free)', maxPods: 2, price: '₹0/mo', priceAmount: 0, billingPeriod: 'month', dataRetentionDays: 7 },
+  orbital: { name: 'Orbital', maxPods: 5, price: '₹130/mo', priceAmount: 130, billingPeriod: 'month', dataRetentionDays: 30 },
+  orbital_pro: { name: 'Orbital Pro', maxPods: 15, price: '₹440/mo', priceAmount: 440, billingPeriod: 'month', dataRetentionDays: 90 },
+  interstellar_max: { name: 'Interstellar Max', maxPods: 999, price: '₹515/mo', priceAmount: 515, billingPeriod: 'month', dataRetentionDays: 365 }
 };
 
 // In-memory / persisted 2FA OTP Store
@@ -277,7 +278,7 @@ function readDb() {
           userName: 'Operator Vijay',
           planTier: 'orbital_pro',
           planName: 'Orbital Pro',
-          amount: '₹3,999/mo',
+          amount: '₹440/mo',
           gateway: 'PhonePe',
           paymentId: '9866606967@superyes',
           utr: '428190382910',
@@ -496,6 +497,89 @@ export const db = {
 
     writeDb(data);
     return true;
+  },
+
+  // ── USER PROFILE & ACCOUNT MANAGEMENT ──
+  updateUserEmail: (currentEmail, newEmail) => {
+    const data = readDb();
+    const user = data.users.find(u => u.email.toLowerCase() === currentEmail.toLowerCase());
+    if (!user) throw new Error('Current user account not found.');
+
+    const duplicate = data.users.find(u => u.email.toLowerCase() === newEmail.toLowerCase() && u.id !== user.id);
+    if (duplicate) throw new Error('An account with this new email address already exists.');
+
+    const oldEmail = user.email;
+    user.email = newEmail.toLowerCase().trim();
+
+    data.logs.unshift({
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      type: 'ACCOUNT',
+      event: `User updated email address: ${oldEmail} -> ${user.email}`,
+      user: user.email,
+      severity: 'info'
+    });
+
+    writeDb(data);
+    const { password: _, ...safeUser } = user;
+    return safeUser;
+  },
+
+  updateUserPassword: (email, newPassword) => {
+    const data = readDb();
+    const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) throw new Error('Account not found.');
+
+    user.password = newPassword;
+
+    data.logs.unshift({
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      type: 'SECURITY',
+      event: `Password updated for operator account: ${user.email}`,
+      user: user.email,
+      severity: 'info'
+    });
+
+    writeDb(data);
+    return true;
+  },
+
+  updateUserTheme: (email, theme) => {
+    const data = readDb();
+    const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) throw new Error('User not found.');
+    user.theme = theme;
+    writeDb(data);
+    const { password: _, ...safeUser } = user;
+    return safeUser;
+  },
+
+  getUserDataSheet: (email) => {
+    const data = readDb();
+    const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) throw new Error('User not found.');
+
+    const { password: _, salt: __, ...safeUser } = user;
+    return {
+      operator: safeUser,
+      organization: data.organization || {},
+      satellite: {
+        callsign: `AEROSPEC-SAT-${user.id ? user.id.slice(-3).toUpperCase() : '001'}`,
+        noradId: `NORAD-${50000 + ((user.id ? user.id.charCodeAt(user.id.length - 1) : 42) * 123) % 9000}`,
+        orbitType: 'Low Earth Orbit (LEO)',
+        altitudeKm: 520,
+        inclinationDeg: 53.2,
+        velocityKmS: 7.66,
+        uplinkFreq: '440.920 MHz',
+        powerEfficiency: '98.4%',
+        status: 'ACTIVE'
+      },
+      pods: data.telemetryPods || [],
+      missions: data.missions || [],
+      reports: data.reports || [],
+      payments: (data.payments || []).filter(p => p.userEmail?.toLowerCase() === email.toLowerCase())
+    };
   },
 
   // ── USER SUBSCRIPTION CHECKOUT ──

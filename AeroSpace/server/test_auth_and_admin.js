@@ -80,7 +80,7 @@ try {
   // 6. User Subscription Checkout & Upgrade
   console.log('\n[6/6] Testing User Subscription Purchase:');
   const subResult = db.userSubscribe(newAccount.id, 'orbital_pro', { cardHolder: 'Astronaut Chris', last4: '8821' });
-  assert(subResult.planTier === 'orbital_pro', 'User subscribed to Orbital Pro ($49/mo)');
+  assert(subResult.planTier === 'orbital_pro', 'User subscribed to Orbital Pro (₹440/mo)');
   const orgAfterSub = db.getOrganization();
   assert(orgAfterSub.planTier === 'orbital_pro' && orgAfterSub.planDetails.maxPods === 15, 'Organization plan elevated to Orbital Pro with 15 pods quota');
 

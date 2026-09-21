@@ -35,17 +35,16 @@ export default function Navbar() {
 
   const navItems = [
     { label: 'Intro',            id: 'hero' },
-    { label: 'Powered by AI*',   id: 'ai-parody' },
-    { label: 'Features',         id: 'features' },
-    { label: 'Cipher',           id: 'cipher' },
-    { label: 'Product Matrix',   id: 'tiers' },
-    { label: 'SOTA Model',       id: 'open-weight' },
-    { label: 'Reviews',          id: 'reviews' },
-    { label: 'Contact',          id: 'contact' },
+    { label: 'Intelligence',     id: 'intelligence' },
+    { label: 'Capabilities',     id: 'capabilities' },
+    { label: 'Technology',       id: 'technology' },
+    { label: 'Global Orbit',     id: 'global' },
+    { label: 'Modules & Cipher', id: 'modules' },
+    { label: 'Mission CTA',      id: 'contact' },
   ];
 
   return (
-    <header className="aero-navbar">
+    <header className={`aero-navbar ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="nav-container">
 
         {/* Brand Logo & Telemetry Status Pill */}
@@ -55,7 +54,8 @@ export default function Navbar() {
           </div>
 
           <div className="nav-status-pill">
-            <span>24/7 ONLINE</span>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00f5ff', boxShadow: '0 0 8px #00f5ff' }} />
+            <span>24/7 ORBITAL RELAY</span>
           </div>
         </div>
 
@@ -81,7 +81,39 @@ export default function Navbar() {
             Join Crew
           </button>
         </div>
+
+        {/* Mobile Hamburger Menu Toggle */}
+        <button
+          className="nav-mobile-toggle"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          style={{ background: 'transparent', border: 'none', color: '#ffedd6', cursor: 'pointer', display: 'none' }}
+        >
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="nav-mobile-menu">
+          {navItems.map((item) => (
+            <button
+              key={item.label}
+              className="nav-mobile-link"
+              onClick={() => handleNavClick(item)}
+            >
+              {item.label}
+            </button>
+          ))}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            <button className="btn is-dark" style={{ flex: 1 }} onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>
+              Sign In
+            </button>
+            <button className="btn is-orange" style={{ flex: 1 }} onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }}>
+              Join Crew
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

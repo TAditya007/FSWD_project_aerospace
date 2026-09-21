@@ -6,6 +6,7 @@ import Signup         from './pages/Signup';
 import PaymentGateway from './pages/PaymentGateway';
 import UserDashboard  from './pages/user/UserDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AuthenticatedLayout from './components/AuthenticatedLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import './App.css';
@@ -14,29 +15,33 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Public Routes ── */}
+        {/* ── Public Routes (Independent Space/Earth System) ── */}
         <Route path="/"          element={<Home />} />
         <Route path="/login"     element={<Login />} />
         <Route path="/signup"    element={<Signup />} />
         <Route path="/payment"   element={<PaymentGateway />} />
         <Route path="/checkout"  element={<PaymentGateway />} />
 
-        {/* ── User Protected Routes ── */}
+        {/* ── User Protected Routes (Continuous Space Mission Control) ── */}
         <Route
           path="/user/dashboard"
           element={
             <ProtectedRoute requiredRole="user">
-              <UserDashboard />
+              <AuthenticatedLayout>
+                <UserDashboard />
+              </AuthenticatedLayout>
             </ProtectedRoute>
           }
         />
 
-        {/* ── Admin Protected Routes ── */}
+        {/* ── Admin Protected Routes (Continuous Space Mission Control) ── */}
         <Route
           path="/admin/dashboard"
           element={
             <ProtectedRoute requiredRole="admin">
-              <AdminDashboard />
+              <AuthenticatedLayout>
+                <AdminDashboard />
+              </AuthenticatedLayout>
             </ProtectedRoute>
           }
         />

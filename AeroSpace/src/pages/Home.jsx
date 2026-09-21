@@ -1,71 +1,76 @@
-import { useState } from 'react';
-import { motion, useMotionValue, useTransform, useAnimation } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
-  Terminal, 
   Layers, 
   ShieldCheck, 
-  Star, 
-  AlertTriangle, 
+  Radio, 
+  Cpu, 
+  Activity, 
+  Wifi, 
+  RefreshCw, 
+  Copy, 
+  Check, 
+  Box, 
   FileText, 
-  Zap,
-  CheckCircle2,
-  Cpu,
-  Radio,
-  Sliders,
-  Flame,
-  ArrowRight,
-  Hand,
-  Play,
-  Lock,
-  Unlock,
-  RefreshCw,
-  Copy,
-  Check,
-  Box,
+  AlertTriangle, 
+  Globe, 
+  Compass, 
+  MapPin, 
+  Sliders, 
+  ChevronRight, 
+  Satellite, 
+  Shield, 
+  Zap, 
+  Eye, 
   Code,
-  Wind,
-  Volume2,
-  VolumeX,
-  Eye,
-  Activity,
-  Compass,
-  RotateCw
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
-import AeroCanvas from '../components/AeroCanvas';
-
+import SpaceScene from '../components/home/SpaceScene';
 import Navbar from '../components/Navbar';
+import { LiveTelemetryBadge, TargetLockIndicator, MissionHUDCard } from '../components/home/HomeHUD';
+import './Home.css';
 
 export default function Home() {
   const navigate = useNavigate();
 
-  // Interstellar Endurance Assembly States
-  const [assemblyStatus, setAssemblyStatus] = useState({
-    dockedCount: 0,
-    totalModules: 12,
-    percent: 0,
-    currentPodName: 'RANGER & CENTRAL DOCKING HUB',
-    isComplete: false,
-  });
-  const [manualProgress, setManualProgress] = useState(null); // null = scroll driven
-  const [isSpinning, setIsSpinning] = useState(true);
+  // Scroll Progress Tracking (0.0 to 1.0)
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeStage, setActiveStage] = useState(0);
 
-  // Smart Encryptor state
+  // Smart Flip Encryption Cipher State
   const [inputText, setInputText] = useState('AEROSPEC');
   const [displayText, setDisplayText] = useState('AEROSPEC');
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Temperature Slider State
-  const [tempSetting, setTempSetting] = useState(1); // 0: T=10, 1: T=1, 2: T=0.1
+  // Thermodynamic Slider State
+  const [tempSetting, setTempSetting] = useState(1);
 
-  // Hardware Tier State
-  const [tierIdx, setTierIdx] = useState(0); // 0: AeroSpec, 1: AeroSpec Pro, 2: AeroSpec Pro Max
+  // Hardware Tier Tab State
+  const [tierIdx, setTierIdx] = useState(0);
 
-  // Copy BibTeX state
+  // Copy State
   const [copiedBib, setCopiedBib] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Active Mission Intelligence Category (0 to 3)
+  const [intelCategory, setIntelCategory] = useState(0);
+
+  // Track Window Scroll for Continuous 3D Scene Interpolation
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? Math.min(Math.max(scrollY / docHeight, 0), 1) : 0;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Encrypt Flip Action
   const handleFlip = () => {
@@ -111,6 +116,49 @@ export default function Home() {
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
+  const categories = [
+    {
+      title: 'Climate & Environment',
+      tag: 'EARTH OBSERVATION',
+      desc: 'High-cadence multispectral telemetry tracking atmospheric methane plumes, polar ice volume changes, and sea surface temperature anomalies.',
+      metrics: [
+        { label: 'CO₂ FLUX', val: '421.4 PPM', color: '#10b981' },
+        { label: 'ICE MELT RES', val: '0.04 MM/YR', color: '#00f5ff' },
+        { label: 'COVERAGE', val: '100% GLOBAL', color: '#38bdf8' }
+      ]
+    },
+    {
+      title: 'Disaster Management',
+      tag: 'RAPID RESPONSE',
+      desc: 'Sub-meter thermal infrared and optical reconnaissance delivering autonomous wildfire early warning, flood boundary mapping, and post-seismic assessment.',
+      metrics: [
+        { label: 'THERMAL LATENCY', val: '12 SEC', color: '#ff5722' },
+        { label: 'SWATH WIDTH', val: '180 KM', color: '#f59e0b' },
+        { label: 'INCIDENT LOCK', val: 'AUTOMATIC', color: '#10b981' }
+      ]
+    },
+    {
+      title: 'Agriculture Intelligence',
+      tag: 'MULTISPECTRAL NDVI',
+      desc: 'Hyperspectral vegetation indexing, soil moisture radar profiling, and automated crop yield predictions enabling algorithmic planetary resource governance.',
+      metrics: [
+        { label: 'NDVI INDEX', val: '0.78 HIGH', color: '#10b981' },
+        { label: 'SOIL MOISTURE', val: '32% OPTIMAL', color: '#00f5ff' },
+        { label: 'SURVEY INTERVAL', val: '4 HOURS', color: '#f59e0b' }
+      ]
+    },
+    {
+      title: 'Urban Infrastructure & SAR',
+      tag: 'SYNTHETIC APERTURE RADAR',
+      desc: 'Interferometric SAR tracking millimeter-level ground subsidence, structural integrity of bridges and dams, and nighttime economic radiance density.',
+      metrics: [
+        { label: 'SAR PRECISION', val: '±1.2 MM', color: '#00f5ff' },
+        { label: 'STRUCTURAL RISK', val: 'ZERO ALERT', color: '#10b981' },
+        { label: 'NIGHT RADIANCE', val: '98.6 W/SR', color: '#f59e0b' }
+      ]
+    }
+  ];
+
   const products = [
     {
       name: 'AEROSPEC',
@@ -152,230 +200,411 @@ export default function Home() {
 
   return (
     <div className="home-root">
-      {/* Interstellar Endurance 3D Spaceship with Real-Time Scroll Modular Assembly */}
-      <AeroCanvas 
-        manualProgress={manualProgress}
-        isSpinning={isSpinning}
-        onAssemblyUpdate={(status) => setAssemblyStatus(status)}
+      {/* ════════════════════════════════════════════════════════════
+          1. PERSISTENT CONTINUOUS 3D SPACE UNIVERSE
+          Single shared Three.js scene reacting to scrollProgress (0 to 1)
+         ════════════════════════════════════════════════════════════ */}
+      <SpaceScene 
+        scrollProgress={scrollProgress} 
+        onStageChange={(stage) => setActiveStage(stage)} 
       />
 
-      {/* Navbar */}
+      {/* ════════════════════════════════════════════════════════════
+          2. GLASS NAVIGATION BAR
+         ════════════════════════════════════════════════════════════ */}
       <Navbar />
 
-      {/* ══════════════════════
-          SECTION 1: HERO (#hero)
-         ══════════════════════ */}
-      <section id="hero" className="hero-section">
-        <div className="o-container hero-grid-wrapper">
-          <div className="hero-content-col">
-            <div className="hero-top-tagline sub1">Interstellar Mission Architecture</div>
-            <h1 className="hero-title-main">ENDURANCE</h1>
-            <p className="hero-copy-body body1">
-              Scroll down to watch the Endurance construct in real time. One by one, every habitation, laboratory, and propulsion pod docks into the 360° ring.
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 0 / SECTION 1: CINEMATIC HERO (#hero)
+         ════════════════════════════════════════════════════════════ */}
+      <section id="hero" className="home-stage-hero">
+        <div className="home-container hero-flex-layout">
+          
+          {/* Left Column: Hero Mission Intelligence */}
+          <div className="hero-text-column">
+            <div className="hero-eyebrow-pill">
+              <span className="live-dot-cyan" />
+              <span>ORBITAL RECONNAISSANCE PLATFORM // NORAD ID 59142</span>
+            </div>
+
+            <h1 className="hero-main-heading">
+              AEROSPEC<br />
+              <span className="text-gradient-cyan">MISSION CONTROL</span>
+            </h1>
+
+            <p className="hero-main-description">
+              Real-time sub-GHz telemetry, constellation tracking, and deep-space orbital intelligence. 
+              Experience seamless planetary surveillance rendered continuously as you travel across low Earth orbit.
             </p>
 
-            <div className="hero-card-box">
-              <h4 className="hero-card-header">
-                12-Module Endurance System<br />
-                with Central Ranger Docking Bay.
-              </h4>
-              <div className="o-dashline" />
-              <div className="hero-card-desc sub2">
-                <span>Autonomous orbital assembly with 5.6 RPM centrifugal artificial gravity.</span>
-              </div>
+            <div className="hero-actions-row">
+              <button className="btn is-orange" onClick={() => navigate('/signup')}>
+                <span>Get Started</span>
+                <ArrowRight size={15} />
+              </button>
+              
+              <button 
+                className="btn is-dark" 
+                onClick={() => {
+                  const el = document.getElementById('intelligence');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Compass size={15} />
+                <span>Explore Orbit ↓</span>
+              </button>
             </div>
 
-            {/* Endurance Modular Assembly Cockpit HUD */}
-            <div className="hero-3d-cockpit-panel">
-              <div className="control-telemetry-badge">
-                <span className={`telemetry-live-dot ${assemblyStatus.isComplete ? 'is-flaming' : ''}`} />
-                <span className="sub2" style={{ color: assemblyStatus.isComplete ? '#00f5ff' : '#ffedd6' }}>
-                  {assemblyStatus.isComplete 
-                    ? 'ENDURANCE 100% ASSEMBLED // ALL 12 PODS LOCKED' 
-                    : `ASSEMBLY IN PROGRESS: [ ${assemblyStatus.dockedCount} / 12 PODS DOCKED ] — ${assemblyStatus.percent}%`}
-                </span>
-                <span style={{ opacity: 0.3 }}>|</span>
-                <span className="sub2" style={{ color: '#ff5722' }}>
-                  {assemblyStatus.currentPodName}
-                </span>
+            {/* Real-Time Telemetry Stat HUD Bar */}
+            <div className="hero-telemetry-hud-card">
+              <div className="telemetry-item">
+                <span className="telemetry-label">ORBIT REGIME</span>
+                <strong className="telemetry-value val-cyan">LEO (540 KM)</strong>
+              </div>
+              <div className="telemetry-item">
+                <span className="telemetry-label">INCLINATION</span>
+                <strong className="telemetry-value val-amber">53.2°</strong>
+              </div>
+              <div className="telemetry-item">
+                <span className="telemetry-label">ORBIT VELOCITY</span>
+                <strong className="telemetry-value val-emerald">7.62 KM/S</strong>
+              </div>
+              <div className="telemetry-item">
+                <span className="telemetry-label">RF LINK STATUS</span>
+                <strong className="telemetry-value val-cyan">NOMINAL LOCK</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Target Lock HUD Overlay */}
+          <div className="hero-floating-hud-column">
+            <div className="floating-hud-wrapper">
+              <LiveTelemetryBadge 
+                callsign="AEROSPEC-SAT-01" 
+                noradId="NORAD-59142" 
+                orbit="LEO 540 KM // 53.2°" 
+              />
+              
+              <div style={{ marginTop: '16px' }}>
+                <TargetLockIndicator label="3D PLANETARY TRACK" status="TARGET LOCKED" />
               </div>
 
-              {/* Progress Bar */}
-              <div style={{ width: '100%', height: '4px', background: 'rgba(255, 237, 214, 0.15)', borderRadius: '2px', overflow: 'hidden', marginBottom: '14px' }}>
-                <div style={{ width: `${assemblyStatus.percent}%`, height: '100%', background: '#ff5722', transition: 'width 0.25s ease' }} />
-              </div>
-
-              {/* Dynamic Telemetry HUD Row */}
-              <div className="telemetry-stat-row">
-                <div className="stat-pill">
-                  <span className="stat-label">VESSEL</span>
-                  <span className="stat-val" style={{ fontSize: '11px', color: '#ffedd6' }}>
-                    ENDURANCE
-                  </span>
+              <div className="floating-quick-telemetry">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#8c857b', fontFamily: 'var(--font-mono)' }}>SUB-GHZ TRANSCEIVER</span>
+                  <span style={{ fontSize: '11px', color: '#00f5ff', fontFamily: 'var(--font-mono)' }}>440.920 MHz</span>
                 </div>
-                <div className="stat-pill">
-                  <span className="stat-label">DOCKED PODS</span>
-                  <span className="stat-val" style={{ color: '#ff5722' }}>
-                    {assemblyStatus.dockedCount} / 12
-                  </span>
+                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: '92%', height: '100%', background: 'linear-gradient(90deg, #00f5ff, #10b981)' }} />
                 </div>
-                <div className="stat-pill">
-                  <span className="stat-label">ARTIFICIAL GRAVITY</span>
-                  <span className="stat-val" style={{ color: isSpinning ? '#00f5ff' : '#8c857b' }}>
-                    {isSpinning ? '5.6 RPM (1g)' : '0 RPM (0g)'}
-                  </span>
-                </div>
-                <div className="stat-pill">
-                  <span className="stat-label">INTEGRITY</span>
-                  <span className="stat-val" style={{ color: assemblyStatus.isComplete ? '#00f5ff' : '#ffedd6' }}>
-                    {assemblyStatus.percent}%
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: '#8c857b', fontFamily: 'var(--font-mono)' }}>
+                  <span>SNR: +18.4 dB</span>
+                  <span>BER &lt; 10⁻¹²</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="hero-btn-row">
-                <button 
-                  className="btn is-orange"
-                  onClick={() => {
-                    const next = Math.min(12, assemblyStatus.dockedCount + 1);
-                    setManualProgress(next / 12);
-                  }}
-                  title="Manually dock next Endurance pod"
+        </div>
+
+        <div className="scroll-invitation-badge">
+          <span>SCROLL DOWN TO INITIATE ORBITAL FLIGHT PATH</span>
+          <span className="scroll-chevron">↓</span>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 1 / SECTION 2: SPACE INTELLIGENCE (#intelligence)
+         ════════════════════════════════════════════════════════════ */}
+      <section id="intelligence" className="home-stage-section">
+        <div className="home-container">
+          <div className="section-header-block">
+            <div className="section-eyebrow">CONTINUOUS ORBITAL SURVEILLANCE</div>
+            <h2 className="section-headline">A NEW ERA OF SPACE INTELLIGENCE</h2>
+            <p className="section-subtext">
+              Autonomous satellite sensors deliver continuous planetary insights. Explore live operational categories below.
+            </p>
+          </div>
+
+          <div className="intel-split-layout">
+            {/* Category Selector Tabs */}
+            <div className="intel-category-nav">
+              {categories.map((cat, idx) => (
+                <button
+                  key={cat.title}
+                  className={`intel-tab-btn ${intelCategory === idx ? 'is-active' : ''}`}
+                  onClick={() => setIntelCategory(idx)}
                 >
-                  <Layers size={15} />
-                  <span>+ Dock Next Pod ({assemblyStatus.dockedCount}/12)</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="intel-tab-title">{cat.title}</span>
+                    <ChevronRight size={16} className="intel-chevron" />
+                  </div>
+                  <span className="intel-tab-tag">{cat.tag}</span>
                 </button>
+              ))}
+            </div>
 
-                <button 
-                  className="btn is-dark"
-                  onClick={() => setManualProgress(1.0)}
-                  title="Instantly complete all 12 modules"
-                >
-                  <Sparkles size={15} />
-                  <span>Complete Ship (100%)</span>
-                </button>
-
-                <button 
-                  className="btn is-dark"
-                  onClick={() => setManualProgress(null)}
-                  title="Return to scroll-driven assembly"
-                >
-                  <Compass size={15} />
-                  <span>{manualProgress === null ? 'Scroll Driven: ACTIVE' : 'Resume Scroll Sync'}</span>
-                </button>
-
-                <button 
-                  className={`btn ${isSpinning ? 'is-orange' : 'is-dark'}`}
-                  onClick={() => setIsSpinning(!isSpinning)}
-                  title="Toggle 5.6 RPM artificial gravity rotation"
-                >
-                  <RefreshCw size={15} className={isSpinning ? 'spin-icon' : ''} />
-                  <span>{isSpinning ? 'Spin: 5.6 RPM' : 'Stationary'}</span>
-                </button>
-              </div>
-
-              <div className="drag-hint-box sub2">
-                <Hand size={14} style={{ color: '#ff5722' }} />
-                <span>SCROLL DOWN TO WATCH MODULES FLY IN & DOCK — DRAG TO ROTATE 360°</span>
-              </div>
+            {/* Active Category Display Panel */}
+            <div className="intel-active-card-wrap">
+              <MissionHUDCard 
+                icon={Radio}
+                title={categories[intelCategory].title}
+                desc={categories[intelCategory].desc}
+                tag={categories[intelCategory].tag}
+                metrics={categories[intelCategory].metrics}
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════
-          SECTION 2: POWERED BY AI* (#ai)
-         ══════════════════════ */}
-      <section id="ai-parody" className="ai-section">
-        <div className="o-container">
-          <h2 className="ai-pre-heading">isn't just <br />a paper plane.</h2>
-          <div className="body1" style={{ margin: '16px 0' }}>
-            AeroSpec isn’t just a plane. It’s the result of unprecedented AI<sup>*</sup> breakthroughs.
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 2 / SECTION 3: CORE CAPABILITIES (#capabilities)
+         ════════════════════════════════════════════════════════════ */}
+      <section id="capabilities" className="home-stage-section">
+        <div className="home-container">
+          <div className="section-header-block">
+            <div className="section-eyebrow">AEROSPACE ARCHITECTURE</div>
+            <h2 className="section-headline">BUILT FOR BIGGER MISSIONS</h2>
+            <p className="section-subtext">
+              Engineered for zero-latency downlinks, deep-space telemetry relay, and multi-tenant fleet command.
+            </p>
           </div>
 
-          <h1 className="ai-title-giant">Powered by AI<sup>*</sup></h1>
-          <div className="ai-tagline-model">AEROSPEC-1</div>
+          <div className="capabilities-grid-4">
+            <MissionHUDCard 
+              icon={Activity}
+              title="Real-Time Telemetry"
+              desc="Sub-second downlink latency with GMSK modulation and AES-256-GCM hardware cipher encryption across all ground nodes."
+              tag="LOW LATENCY"
+              metrics={[
+                { label: 'DOWNLINK', val: '0.12s', color: '#00f5ff' },
+                { label: 'ENCRYPTION', val: 'AES-256', color: '#10b981' }
+              ]}
+            />
 
-          <div className="ai-instruction-box">
-            <Hand size={16} className="icon-gold" />
-            <span>Try to hover hand / drag trajectory</span>
-          </div>
+            <MissionHUDCard 
+              icon={Cpu}
+              title="Advanced Analytics"
+              desc="Orbital trajectory interpolation, automated collision avoidance vectors, and atmospheric density drag modeling."
+              tag="AI FLIGHT OPS"
+              metrics={[
+                { label: 'ACCURACY', val: '99.98%', color: '#38bdf8' },
+                { label: 'PREDICTION', val: '72H AHEAD', color: '#f59e0b' }
+              ]}
+            />
 
-          <div className="ai-desc-sub body1">
-            AI fills in the gaps. We said pitch up 5°. It heard ninety.
-          </div>
+            <MissionHUDCard 
+              icon={Globe}
+              title="Global Coverage"
+              desc="360° inclined orbital constellation mesh with cross-satellite laser data links eliminating ground tracking deadzones."
+              tag="MESH RELAY"
+              metrics={[
+                { label: 'SAT NODES', val: '24 FLEET', color: '#10b981' },
+                { label: 'BLIND ZONES', val: 'ZERO', color: '#00f5ff' }
+              ]}
+            />
 
-          <div className="ai-disclaimer-box">
-            <span>* Altitude Indicators</span>
+            <MissionHUDCard 
+              icon={ShieldCheck}
+              title="Mission Control"
+              desc="Multi-tenant role-based access control, cryptographic data sheet export, and instant 2FA verified credential security."
+              tag="SECURE RBAC"
+              metrics={[
+                { label: 'AUTH', val: '2FA OTP', color: '#10b981' },
+                { label: 'UPTIME', val: '99.99%', color: '#00f5ff' }
+              ]}
+            />
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════
-          SECTION 3: WEARABLE & MAGAZINE (#wearable)
-         ══════════════════════ */}
-      <section className="wearable-section">
-        <div className="o-container">
-          <h2 className="wearable-title">
-            <span>So portable,</span> <span>it's flight ready</span>
-          </h2>
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 3 / SECTION 4: TECHNOLOGY THAT GOES FURTHER (#technology)
+         ════════════════════════════════════════════════════════════ */}
+      <section id="technology" className="home-stage-section">
+        <div className="home-container">
+          <div className="tech-split-container">
+            
+            {/* Left: Satellite Close-Up Telemetry HUD */}
+            <div className="tech-hud-overview">
+              <div className="tech-badge-title">
+                <Satellite size={18} color="#00f5ff" />
+                <span>ORBITAL HARDWARE ARCHITECTURE</span>
+              </div>
 
-          <div className="magazine-cover-box">
-            <div className="magazine-issue">ISSUE NO. 00124</div>
-            <h1 className="magazine-main-title">We Are So Cooked!</h1>
-            <p className="body1" style={{ marginBottom: '24px' }}>
-              AeroSpec is taking everyone's pilot jobs... and replacing them with AI paper planes!
+              <div className="tech-telemetry-spec-box">
+                <h3 style={{ margin: 0, color: '#ffedd6', fontSize: '20px', fontFamily: 'var(--font-mono)' }}>
+                  AEROSPEC BUS // SERIES-IV
+                </h3>
+                <p style={{ margin: '8px 0 16px', fontSize: '13px', color: '#8c857b' }}>
+                  Articulated dual-axis photovoltaic arrays, high-gain parabolic transceiver, and radiation-hardened flight controllers.
+                </p>
+
+                <div className="tech-spec-rows">
+                  <div className="tech-row">
+                    <span className="row-label">POWER EFFICIENCY</span>
+                    <span className="row-val val-emerald">98.4% [GaAs Solar Cells]</span>
+                  </div>
+                  <div className="tech-row">
+                    <span className="row-label">TRANSMIT GAIN</span>
+                    <span className="row-val val-cyan">+18.5 dBm Nominal</span>
+                  </div>
+                  <div className="tech-row">
+                    <span className="row-label">PROPULSION</span>
+                    <span className="row-val val-amber">Cold-Gas Micro-Thrusters</span>
+                  </div>
+                  <div className="tech-row">
+                    <span className="row-label">PAYLOAD CAPACITY</span>
+                    <span className="row-val val-cyan">15 Multi-Band Telemetry Pods</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: 4 Technology Pillars */}
+            <div className="tech-pillars-column">
+              <div className="section-header-block" style={{ textAlign: 'left', marginBottom: '24px' }}>
+                <div className="section-eyebrow">PROPULSION & DATA RELAY</div>
+                <h2 className="section-headline">TECHNOLOGY THAT GOES FURTHER</h2>
+              </div>
+
+              <div className="tech-pillars-list">
+                <div className="tech-pillar-item">
+                  <div className="pillar-icon"><Zap size={20} /></div>
+                  <div>
+                    <h4>AI-Driven Autonomy</h4>
+                    <p>On-board algorithmic anomaly detection continuously rectifies Keplerian orbital decay and drift.</p>
+                  </div>
+                </div>
+
+                <div className="tech-pillar-item">
+                  <div className="pillar-icon"><Radio size={20} /></div>
+                  <div>
+                    <h4>24/7 Orbital Monitoring</h4>
+                    <p>Uninterrupted sub-GHz telemetry streaming with Doppler shift correction and parity lock.</p>
+                  </div>
+                </div>
+
+                <div className="tech-pillar-item">
+                  <div className="pillar-icon"><Globe size={20} /></div>
+                  <div>
+                    <h4>Global Constellation Coverage</h4>
+                    <p>Equatorial and polar trajectories ensure complete sensor illumination of every square kilometer.</p>
+                  </div>
+                </div>
+
+                <div className="tech-pillar-item">
+                  <div className="pillar-icon"><Shield size={20} /></div>
+                  <div>
+                    <h4>Secure & Cryptographically Verified</h4>
+                    <p>End-to-end AES-256 payload encryption with instant verified cryptographic data sheet exports.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 4 / SECTION 5: GLOBAL / EARTH SECTION (#global)
+         ════════════════════════════════════════════════════════════ */}
+      <section id="global" className="home-stage-section">
+        <div className="home-container">
+          <div className="section-header-block">
+            <div className="section-eyebrow">GLOBAL EARTH OBSERVATION</div>
+            <h2 className="section-headline">A SAFER, GREENER TOMORROW</h2>
+            <p className="section-subtext">
+              Planetary lifelines monitored in real time from sun-synchronous orbit with sub-meter spatial precision.
+            </p>
+          </div>
+
+          <div className="global-markers-grid">
+            <div className="global-marker-card">
+              <span className="marker-index">01</span>
+              <h4>Atmospheric Aerosol Density</h4>
+              <p>Continuous ultraviolet/visible limb sounding verifying global air quality and ozone recovery.</p>
+              <span className="marker-status val-emerald">99.4% OPTIMAL SENSOR NOMINAL</span>
+            </div>
+
+            <div className="global-marker-card">
+              <span className="marker-index">02</span>
+              <h4>Ocean Circulation Radar</h4>
+              <p>Altimetric surface radar profiling deep-ocean thermohaline circulation vectors and heat anomalies.</p>
+              <span className="marker-status val-cyan">CURRENT DYNAMICS STABLE</span>
+            </div>
+
+            <div className="global-marker-card">
+              <span className="marker-index">03</span>
+              <h4>Geostationary Space Weather</h4>
+              <p>Solar flare geomagnetic storm indices tracked with early warning downlink to ground electrical grids.</p>
+              <span className="marker-status val-amber">SOLAR ACTIVITY: LOW (KP-1)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 5 / SECTION 6: SECONDARY MODULES & TOOLS (#modules)
+          Preserving Smart Flip Cipher, Gain Slider, Product Matrix, SOTA Model & Reviews
+         ════════════════════════════════════════════════════════════ */}
+      <section id="modules" className="home-stage-section">
+        <div className="home-container">
+          <div className="section-header-block">
+            <div className="section-eyebrow">MISSION TOOLKIT & VERIFIED AUDITS</div>
+            <h2 className="section-headline">SECONDARY MODULES & FLIGHT MATRIX</h2>
+            <p className="section-subtext">
+              Interactive flight tools, hardware tiers, open-weight research models, and verified operator evaluations.
+            </p>
+          </div>
+
+          {/* Module A: Smart Flip Encryption Tool */}
+          <div className="module-interactive-card">
+            <div className="module-header-pill">
+              <Radio size={14} color="#ff5722" />
+              <span>SMART FLIP ENCRYPTION CIPHER</span>
+            </div>
+            <h3 style={{ margin: '8px 0 12px', fontSize: '22px', color: '#ffedd6' }}>
+              Cryptographic Message Scrambler
+            </h3>
+            <p style={{ color: '#c9bbaa', fontSize: '14px', maxWidth: '600px', margin: '0 auto 20px' }}>
+              Write an aerospace callsign or coordinate message. Flip to scramble and encode in real time.
             </p>
 
-            <div className="magazine-warning-pill">
-              <AlertTriangle size={18} className="icon-gold" />
-              <span>Warning: This flight stunt was performed by professionals. Do not attempt at home.</span>
-            </div>
-          </div>
-        </div>
-      </section>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+              <input
+                type="text"
+                className="encryption-input"
+                value={inputText}
+                maxLength={16}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setInputText(val);
+                  if (!isEncrypted) setDisplayText(val);
+                }}
+              />
 
-      {/* ══════════════════════
-          SECTION 4: FEATURES GRID & SLIDER (#features)
-         ══════════════════════ */}
-      <section id="features" className="features-section">
-        <div className="o-container">
-          <div className="features-items-grid">
-            <div className="features-item-card">
-              <div className="features-item-tagline">RISE ABOVE MEDIOCRITY</div>
-              <h3 className="features-item-title">Elevate your flight experience</h3>
-              <p className="features-item-desc">
-                With a precision-engineered lift (exactly one paper-clip thick), AeroSpec doesn’t just hold your flight log - it elevates it. Literally. Above every boring ground station you’ve ever known.
-              </p>
-              <div className="o-dashline" />
-              <code className="sub2">LIFT = ½ · ρ · v² · S · CL</code>
-            </div>
+              <div className="encryption-scramble-output">
+                {displayText}
+              </div>
 
-            <div className="features-item-card">
-              <div className="features-item-tagline">HANDLES EXTREMES WITH EASE</div>
-              <h3 className="features-item-title">Thermodynamic stability</h3>
-              <p className="features-item-desc">
-                From piping-hot friction to sub-zero high-altitude air - AeroSpec stays perfectly stable. Your ground dish tapped out three miles ago.
-              </p>
-              <div className="o-dashline" />
-              <code className="sub2">N = k · T · B  (Noise Floor -124 dBm)</code>
-            </div>
-
-            <div className="features-item-card">
-              <div className="features-item-tagline">PERFECTLY PITCHED, SERIOUSLY</div>
-              <h3 className="features-item-title">Now 37.9% More Aerodynamic</h3>
-              <p className="features-item-desc">
-                Our flight engineers recalibrated its loop circumference with disturbing levels of attention to detail - just because we could.
-              </p>
-              <div className="o-dashline" />
-              <code className="sub2">RoPE: Roundness Optimization & Perimeter Engineering</code>
+              <button className="btn is-orange" onClick={handleFlip} disabled={isAnimating}>
+                <RefreshCw size={15} className={isAnimating ? 'spin-icon' : ''} />
+                <span>{isEncrypted ? 'Decode Message' : 'Encode Message'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Temperature / Gain Slider */}
-          <div className="temp-slider-container">
-            <div className="sub2" style={{ marginBottom: '12px' }}>THERMODYNAMIC & CARRIER GAIN SLIDER</div>
-            <div className="temp-slider-tabs">
+          {/* Module B: Thermodynamic & Carrier Gain Slider */}
+          <div className="module-interactive-card" style={{ marginTop: '32px' }}>
+            <div className="module-header-pill">
+              <Sliders size={14} color="#00f5ff" />
+              <span>RF CARRIER NOISE & TEMPERATURE SLIDER</span>
+            </div>
+
+            <div className="temp-slider-tabs" style={{ margin: '16px auto 14px' }}>
               <button 
                 className={`temp-btn ${tempSetting === 0 ? 'is-active' : ''}`}
                 onClick={() => setTempSetting(0)}
@@ -402,221 +631,191 @@ export default function Home() {
               {tempSetting === 2 && <code>{"BER < 10⁻¹²  [Deterministic Zero Bit-Error Downlink]"}</code>}
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ══════════════════════
-          SECTION 5: SMART FLIP ENCRYPTION (#encryption)
-         ══════════════════════ */}
-      <section id="cipher" className="encryption-section">
-        <div className="o-container">
-          <div className="encryption-box">
-            <div className="sub1" style={{ color: '#ff5722' }}>SECURE COMMUNICATIONS SIMPLIFIED</div>
-            <h2 className="encryption-title">Smart flip encryption</h2>
-            <p className="body2" style={{ marginBottom: '32px' }}>
-              Write a message. Flip. Instantly secure - until someone flips it back. Genius.
+          {/* Module C: Hardware Matrix Table */}
+          <div className="module-interactive-card" style={{ marginTop: '32px', textAlign: 'left' }}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div className="module-header-pill">
+                <Box size={14} color="#f59e0b" />
+                <span>AEROSPEC HARDWARE MATRIX</span>
+              </div>
+              <h3 style={{ margin: '8px 0 0', color: '#ffedd6', fontSize: '20px' }}>
+                Multi-Tier Hardware Specifications
+              </h3>
+            </div>
+
+            <div className="product-option-tabs" style={{ justifyContent: 'center', marginBottom: '20px' }}>
+              {products.map((p, idx) => (
+                <button
+                  key={idx}
+                  className={`btn is-dark ${tierIdx === idx ? 'is-active' : ''}`}
+                  onClick={() => setTierIdx(idx)}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+
+            <table className="compare-matrix-table">
+              <thead>
+                <tr>
+                  <th>AEROSPEC</th>
+                  <th>AEROSPEC Pro</th>
+                  <th>AEROSPEC Pro Max</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Stack:</strong> {products[0].stack}</td>
+                  <td><strong>Stack:</strong> {products[1].stack}</td>
+                  <td><strong>Stack:</strong> {products[2].stack}</td>
+                </tr>
+                <tr>
+                  <td><strong>Lift:</strong> {products[0].lift}</td>
+                  <td><strong>Lift:</strong> {products[1].lift}</td>
+                  <td><strong>Lift:</strong> {products[2].lift}</td>
+                </tr>
+                <tr>
+                  <td><strong>Material:</strong> {products[0].material}</td>
+                  <td><strong>Material:</strong> {products[1].material}</td>
+                  <td><strong>Material:</strong> {products[2].material}</td>
+                </tr>
+                <tr>
+                  <td><strong>Telemetry:</strong> {products[0].connectivity}</td>
+                  <td><strong>Telemetry:</strong> {products[1].connectivity}</td>
+                  <td><strong>Telemetry:</strong> {products[2].connectivity}</td>
+                </tr>
+                <tr>
+                  <td><strong>Firmware:</strong> {products[0].updates}</td>
+                  <td><strong>Firmware:</strong> {products[1].updates}</td>
+                  <td><strong>Firmware:</strong> {products[2].updates}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Module D: Open-Weight SOTA Model & BibTeX */}
+          <div className="module-interactive-card" style={{ marginTop: '32px' }}>
+            <div className="module-header-pill">
+              <FileText size={14} color="#00f5ff" />
+              <span>SOTA OPEN-WEIGHT MODEL</span>
+            </div>
+            <h3 style={{ margin: '8px 0 12px', fontSize: '24px', color: '#ffedd6', fontFamily: 'var(--font-mono)' }}>
+              AEROSPEC-1
+            </h3>
+            <p style={{ color: '#c9bbaa', fontSize: '13px', maxWidth: '640px', margin: '0 auto 18px' }}>
+              Open-weight 3D model of our telemetry aerodynamic pod for rendering and physical flight simulation.
             </p>
 
-            <input
-              type="text"
-              className="encryption-input"
-              value={inputText}
-              maxLength={16}
-              onChange={(e) => {
-                const val = e.target.value.toUpperCase();
-                setInputText(val);
-                if (!isEncrypted) setDisplayText(val);
-              }}
-            />
-
-            <div className="encryption-scramble-output">
-              {displayText}
-            </div>
-
-            <button className="btn is-orange" onClick={handleFlip} disabled={isAnimating}>
-              <RefreshCw size={16} className={isAnimating ? 'spin-icon' : ''} />
-              <span>{isEncrypted ? 'Decode Message' : 'Encode Message'}</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════
-          SECTION 6: TESTIMONIES TABLE (#testimonies)
-         ══════════════════════ */}
-      <section id="reviews" className="testimonies-section">
-        <div className="o-container">
-          <div className="sub1" style={{ marginBottom: '12px' }}>Rating & Reviews</div>
-          <h2 className="wearable-title" style={{ fontSize: '42px', marginBottom: '40px' }}>
-            People all around the world love AeroSpec
-          </h2>
-
-          <div className="testimonies-table-container">
-            <div className="testimonies-table-header">
-              <div>Custom reviews [ 364 ]</div>
-              <div style={{ color: '#ff5722' }}>★★★★★ [ 4.9/5 ]</div>
-              <div>AEROSPEC in use</div>
-            </div>
-
-            <div className="testimonies-row">
-              <div>
-                <div className="testimonies-quote">
-                  "This is the <span>best paper plane</span> I've ever used. I can't go to space without it."
-                </div>
-                <div className="testimonies-author">Edan K. — NASA astronaut wannabe</div>
-              </div>
-              <div className="sub2">[ 5.0/5 ]</div>
-            </div>
-
-            <div className="testimonies-row">
-              <div>
-                <div className="testimonies-quote">
-                  "My plane? If you want it, I'll let you have it. Look for it! I left everything together in <span>one place!</span>"
-                </div>
-                <div className="testimonies-author">Gol D. Roger — Old-school Pirate & Aviator</div>
-              </div>
-              <div className="sub2">[ 4.5/5 ]</div>
-            </div>
-
-            <div className="testimonies-row">
-              <div>
-                <div className="testimonies-quote">
-                  "<span>We are so cooked</span>. Hollywood is not ready for a telemetry pod this cinematic."
-                </div>
-                <div className="testimonies-author">Jamie R. — AI influencer, Ex-Web3 developer</div>
-              </div>
-              <div className="sub2">[ 5.0/5 ]</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════
-          SECTION 7: PRODUCT COMPARISON MATRIX (#product)
-         ══════════════════════ */}
-      <section id="tiers" className="product-matrix-section">
-        <div className="o-container">
-          <div className="sub1" style={{ textAlign: 'center', marginBottom: '12px' }}>CHOOSE YOUR OWN</div>
-          <h2 className="wearable-title" style={{ textAlign: 'center', marginBottom: '40px' }}>AEROSPEC HARDWARE MATRIX</h2>
-
-          <div className="product-option-tabs">
-            {products.map((p, idx) => (
-              <button
-                key={idx}
-                className={`btn is-dark ${tierIdx === idx ? 'is-active' : ''}`}
-                onClick={() => setTierIdx(idx)}
-              >
-                {p.name}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              <button className="btn is-dark" onClick={() => alert('Downloading AeroSpec-1 Technical PDF...')}>
+                <FileText size={15} /> <span>Paper (PDF)</span>
               </button>
-            ))}
-          </div>
-
-          <table className="compare-matrix-table">
-            <thead>
-              <tr>
-                <th>AEROSPEC</th>
-                <th>AEROSPEC Pro</th>
-                <th>AEROSPEC Pro Max</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Stack:</strong> {products[0].stack}</td>
-                <td><strong>Stack:</strong> {products[1].stack}</td>
-                <td><strong>Stack:</strong> {products[2].stack}</td>
-              </tr>
-              <tr>
-                <td><strong>Lift:</strong> {products[0].lift}</td>
-                <td><strong>Lift:</strong> {products[1].lift}</td>
-                <td><strong>Lift:</strong> {products[2].lift}</td>
-              </tr>
-              <tr>
-                <td><strong>Material:</strong> {products[0].material}</td>
-                <td><strong>Material:</strong> {products[1].material}</td>
-                <td><strong>Material:</strong> {products[2].material}</td>
-              </tr>
-              <tr>
-                <td><strong>Telemetry:</strong> {products[0].connectivity}</td>
-                <td><strong>Telemetry:</strong> {products[1].connectivity}</td>
-                <td><strong>Telemetry:</strong> {products[2].connectivity}</td>
-              </tr>
-              <tr>
-                <td><strong>Firmware Updates:</strong> {products[0].updates}</td>
-                <td><strong>Firmware Updates:</strong> {products[1].updates}</td>
-                <td><strong>Firmware Updates:</strong> {products[2].updates}</td>
-              </tr>
-              <tr>
-                <td><strong>Best For:</strong> {products[0].bestFor}</td>
-                <td><strong>Best For:</strong> {products[1].bestFor}</td>
-                <td><strong>Best For:</strong> {products[2].bestFor}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ══════════════════════
-          SECTION 8: OPEN WEIGHT SOTA MODEL (#open-weight)
-         ══════════════════════ */}
-      <section id="open-weight" className="open-weight-section">
-        <div className="o-container">
-          <div className="open-weight-box">
-            <div className="sub1" style={{ color: '#ff5722' }}>OUR SOTA OPEN WEIGHT MODEL</div>
-            <h1 className="open-weight-title-big">AEROSPEC-1</h1>
-
-            <div className="open-weight-btn-group">
-              <button className="btn is-dark" onClick={() => alert('Downloading AeroSpec-1 Paper PDF...')}>
-                <FileText size={16} /> <span>Paper (PDF)</span>
-              </button>
-              <button className="btn is-dark" onClick={() => alert('Downloading AeroSpec-1 Mesh .OBJ...')}>
-                <Box size={16} /> <span>Model (.OBJ)</span>
-              </button>
-              <button className="btn is-dark" style={{ opacity: 0.5 }}>
-                <Code size={16} /> <span>Code Coming Soon</span>
+              <button className="btn is-dark" onClick={() => alert('Downloading AeroSpec-1 Mesh OBJ...')}>
+                <Box size={15} /> <span>Model (.OBJ)</span>
               </button>
             </div>
 
-            <div className="body2" style={{ marginBottom: '24px' }}>
-              <strong>Abstract:</strong> We present AeroSpec-1, an open-weight 3D model of a paper aeroplane for rendering, flight simulation, and gloriously unnecessary aerospace research.
-            </div>
-
-            <div className="sub2" style={{ marginBottom: '8px' }}>BibTeX Citation:</div>
             <pre className="bibtex-pre-block">{bibtexCode}</pre>
 
             <button className="btn is-dark" onClick={handleCopyBib} style={{ marginTop: '16px' }}>
               {copiedBib ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedBib ? 'Copied' : 'Copy BibTeX'}</span>
+              <span>{copiedBib ? 'Copied' : 'Copy BibTeX Citation'}</span>
             </button>
           </div>
+
+          {/* Module E: Verified Operator Testimonies */}
+          <div className="module-interactive-card" style={{ marginTop: '32px', textAlign: 'left' }}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div className="module-header-pill">
+                <Sparkles size={14} color="#10b981" />
+                <span>OPERATOR EVALUATIONS [ 4.9 / 5.0 ]</span>
+              </div>
+              <h3 style={{ margin: '8px 0 0', color: '#ffedd6', fontSize: '20px' }}>
+                Global Mission Crew Reviews
+              </h3>
+            </div>
+
+            <div className="testimonies-table-container">
+              <div className="testimonies-row">
+                <div>
+                  <div className="testimonies-quote">
+                    "This is the <span style={{ color: '#00f5ff' }}>best telemetry platform</span> I've ever deployed. Unbeatable orbital visuals."
+                  </div>
+                  <div className="testimonies-author">Edan K. — NASA astronaut wannabe</div>
+                </div>
+                <div className="sub2" style={{ color: '#10b981' }}>[ 5.0/5 ]</div>
+              </div>
+
+              <div className="testimonies-row">
+                <div>
+                  <div className="testimonies-quote">
+                    "My plane? If you want it, I'll let you have it. Look for it! I left everything together in <span style={{ color: '#f59e0b' }}>one place!</span>"
+                  </div>
+                  <div className="testimonies-author">Gol D. Roger — Old-school Pirate & Aviator</div>
+                </div>
+                <div className="sub2" style={{ color: '#10b981' }}>[ 4.5/5 ]</div>
+              </div>
+
+              <div className="testimonies-row">
+                <div>
+                  <div className="testimonies-quote">
+                    "<span style={{ color: '#ff5722' }}>We are so cooked</span>. Hollywood is not ready for a telemetry cockpit this cinematic."
+                  </div>
+                  <div className="testimonies-author">Jamie R. — AI influencer, Ex-Web3 developer</div>
+                </div>
+                <div className="sub2" style={{ color: '#10b981' }}>[ 5.0/5 ]</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
-      {/* ══════════════════════
-          SECTION 9: FOOTER (#footer)
-         ══════════════════════ */}
-      <footer id="contact" className="footer-section">
-        <div className="o-container">
-          <h2 className="footer-closing-headline">
-            We caught your attention with a non-existent product. If we can sell a paper plane, imagine what we can do for your brand.
-          </h2>
-          <div className="footer-closing-sub">Built by AeroSpace Creative Lab</div>
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 6 / SECTION 7: FINAL MISSION CTA (#contact)
+          Preserving the satirical closing concept, Join Crew & Copy URL
+         ════════════════════════════════════════════════════════════ */}
+      <footer id="contact" className="home-stage-footer">
+        <div className="home-container">
+          <div className="footer-hud-box">
+            
+            <div className="footer-status-tag">
+              <span className="live-dot-cyan" />
+              <span>ORBITAL VOYAGE COMPLETE // ALL SYSTEMS NOMINAL</span>
+            </div>
 
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '40px' }}>
-            <button className="btn is-orange" onClick={() => navigate('/signup')}>
-              Join Mission Crew
-            </button>
-            <button className="btn is-dark" onClick={handleCopyUrl}>
-              {copiedUrl ? 'Copied Link' : 'Copy URL'}
-            </button>
-          </div>
+            <h2 className="footer-closing-headline">
+              We caught your attention with a non-existent product.<br />
+              <span className="text-gradient-cyan">Imagine what we can build for your aerospace brand.</span>
+            </h2>
 
-          <div className="o-dashline" />
+            <div className="footer-closing-sub">
+              AeroSpace Creative Lab // Next-Generation Mission Interfaces
+            </div>
 
-          <div className="footer-disclaimer-note">
-            This entire site is a fictional creative project by AeroSpace. AeroSpec doesn't exist. No products are for sale. All claims are satirical and for entertainment purposes only.
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', margin: '32px 0 36px', flexWrap: 'wrap' }}>
+              <button className="btn is-orange" onClick={() => navigate('/signup')}>
+                <span>Join Mission Crew</span>
+                <ArrowRight size={15} />
+              </button>
+              
+              <button className="btn is-dark" onClick={handleCopyUrl}>
+                {copiedUrl ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                <span>{copiedUrl ? 'Copied Link' : 'Copy Project URL'}</span>
+              </button>
+            </div>
+
+            <div className="o-dashline" style={{ maxWidth: '800px', margin: '0 auto 24px' }} />
+
+            <div className="footer-disclaimer-note">
+              This entire site is a fictional creative project by AeroSpace. AeroSpec doesn't exist. 
+              No products are for sale. All claims are satirical and for entertainment purposes only.
+            </div>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
