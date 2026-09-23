@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import SpaceScene from '../components/home/SpaceScene';
 import Navbar from '../components/Navbar';
+import ContactSection from '../components/ContactSection';
 import { LiveTelemetryBadge, TargetLockIndicator, MissionHUDCard } from '../components/home/HomeHUD';
 import './Home.css';
 
@@ -773,10 +774,15 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-          STAGE 6 / SECTION 7: FINAL MISSION CTA (#contact)
+          STAGE 6 / SECTION 7: CONTACT OPERATIONS & MISSION DISPATCH (#contact)
+         ════════════════════════════════════════════════════════════ */}
+      <ContactSection />
+
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 7 / SECTION 8: FINAL MISSION CLOSING & DISCLAIMER (#footer)
           Preserving the satirical closing concept, Join Crew & Copy URL
          ════════════════════════════════════════════════════════════ */}
-      <footer id="contact" className="home-stage-footer">
+      <footer id="footer" className="home-stage-footer">
         <div className="home-container">
           <div className="footer-hud-box">
             

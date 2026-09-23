@@ -40,7 +40,7 @@ export default function Navbar() {
     { label: 'Technology',       id: 'technology' },
     { label: 'Global Orbit',     id: 'global' },
     { label: 'Modules & Cipher', id: 'modules' },
-    { label: 'Mission CTA',      id: 'contact' },
+    { label: 'Contact Us',       id: 'contact' },
   ];
 
   return (

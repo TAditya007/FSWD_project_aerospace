@@ -21,6 +21,8 @@ export default function EmailChangeModal({
   const [deliveryMode, setDeliveryMode] = useState('');
   const [otpPreview, setOtpPreview] = useState('');
 
+  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
   const handleRequestOtp = async (e) => {
     e.preventDefault();
     setError('');
@@ -37,7 +39,7 @@ export default function EmailChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/user/email/request-otp', {
+      const res = await fetch(`${API_BASE}/api/user/email/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -52,7 +54,7 @@ export default function EmailChangeModal({
       }
 
       setDeliveryMode(data.deliveryMode);
-      if (data.otpPreview) {
+      if (!import.meta.env.PROD && data.otpPreview) {
         setOtpPreview(data.otpPreview);
       }
       setStep(2);
@@ -74,7 +76,7 @@ export default function EmailChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/user/email/verify-otp', {
+      const res = await fetch(`${API_BASE}/api/user/email/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

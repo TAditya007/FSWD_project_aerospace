@@ -48,7 +48,7 @@ export default function PasswordChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/user/password/request-otp', {
+      const res = await fetch(`${API_BASE}/api/user/password/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +62,7 @@ export default function PasswordChangeModal({
         throw new Error(data.message || 'Current password verification failed.');
       }
 
-      if (data.otpPreview) {
+      if (!import.meta.env.PROD && data.otpPreview) {
         setOtpPreview(data.otpPreview);
       }
       setStep(2);
@@ -84,7 +84,7 @@ export default function PasswordChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/user/password/verify-otp', {
+      const res = await fetch(`${API_BASE}/api/user/password/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

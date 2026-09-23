@@ -79,19 +79,30 @@ export default function PaymentGateway() {
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
+  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+  // Helper to safely parse JSON responses
+  const safeParseJson = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('BACKEND_OFFLINE');
+    }
+    return await response.json();
+  };
+
   // 1. Send OTP to bikkinavijay0@gmail.com
   const handleSendOtp = async () => {
     setSendingOtp(true);
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/payment/send-otp', {
+      const res = await fetch(`${API_BASE}/api/payment/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, name: user.name || 'Flight Operator' })
       });
 
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Failed to dispatch payment OTP.');
       }
@@ -100,13 +111,17 @@ export default function PaymentGateway() {
       setOtpSent(true);
       setResendTimer(30);
     } catch (err) {
-      // Dev offline fallback
-      setOtpDeliveryInfo({
-        otpPreview: Math.floor(100000 + Math.random() * 900000).toString(),
-        deliveryMode: 'LOCAL_DEV'
-      });
-      setOtpSent(true);
-      setResendTimer(30);
+      if (!import.meta.env.PROD) {
+        // Dev offline fallback
+        setOtpDeliveryInfo({
+          otpPreview: Math.floor(100000 + Math.random() * 900000).toString(),
+          deliveryMode: 'LOCAL_DEV'
+        });
+        setOtpSent(true);
+        setResendTimer(30);
+      } else {
+        setErrorMsg(err.message || 'Unable to send OTP email. Please try again.');
+      }
     } finally {
       setSendingOtp(false);
     }
@@ -124,24 +139,24 @@ export default function PaymentGateway() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/payment/verify-otp', {
+      const res = await fetch(`${API_BASE}/api/payment/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, otp: otpCode.trim() })
       });
 
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid OTP code.');
       }
 
       setOtpVerified(true);
     } catch (err) {
-      if (otpDeliveryInfo?.otpPreview && otpCode.trim() === otpDeliveryInfo.otpPreview) {
+      if (!import.meta.env.PROD && otpDeliveryInfo?.otpPreview && otpCode.trim() === otpDeliveryInfo.otpPreview) {
         setOtpVerified(true);
         return;
       }
-      setErrorMsg(err.message || 'Invalid 6-digit OTP code.');
+      setErrorMsg(err.message === 'BACKEND_OFFLINE' ? 'Backend server unreachable. Please verify connection.' : (err.message || 'Invalid 6-digit OTP code.'));
     } finally {
       setVerifyingOtp(false);
     }

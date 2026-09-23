@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Lock, Mail, ArrowRight, KeyRound, CheckCircle, RefreshCw, ExternalLink, Sparkles } from 'lucide-react';
+import { signInWithGoogle } from '../config/firebase';
 import './auth.css';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -34,6 +36,17 @@ export default function Login() {
     return () => clearInterval(timer);
   }, [otpStep, resendTimer]);
 
+  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+  // Helper to safely parse JSON responses from backend
+  const safeParseJson = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('BACKEND_OFFLINE');
+    }
+    return await response.json();
+  };
+
   // Phase 1: Validate Email & Password, Request Real 2FA OTP
   const handleInitiateLogin = async (e) => {
     e.preventDefault();
@@ -42,25 +55,29 @@ export default function Login() {
 
     try {
       // 1. Verify credentials against DB
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await res.json();
+      const data = await safeParseJson(res);
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid email or password.');
       }
 
       // 2. Dispatch real 2FA OTP via nodemailer
-      const otpRes = await fetch('/api/auth/send-otp', {
+      const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type: 'LOGIN' })
       });
-      const otpData = await otpRes.json();
+      const otpData = await safeParseJson(otpRes);
+
+      if (!otpRes.ok || !otpData.success) {
+        throw new Error(otpData.message || 'Unable to send OTP email. Please try again.');
+      }
 
       setDeliveryInfo({
         mode: otpData.deliveryMode || 'LIVE_SMTP',
@@ -72,20 +89,28 @@ export default function Login() {
       setResendTimer(30);
       setCanResend(false);
     } catch (err) {
-      // Offline fallback for testing
-      const lower = email.toLowerCase();
-      if ((lower === 'vijay@aerospec.com' && password === 'vijay@2007') ||
-          (lower === 'aditya@aerospec.com' && password === 'aditya@007') ||
-          (lower === 'user@aerospec.com' && password === 'user123')) {
-        const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
-        setDeliveryInfo({ mode: 'DEV_SIMULATION', otpPreview: mockCode, previewUrl: null });
-        setOtpStep(true);
-        setResendTimer(30);
-        setCanResend(false);
-        return;
+      // In production: NEVER fall back to dev simulation or expose mock OTP!
+      if (!import.meta.env.PROD) {
+        const lower = email.toLowerCase().trim();
+        const isAditya = (lower === 'aditya@aerospec.com' || lower === 'adityalap007@gmail.com') && password === 'aditya@007';
+        const isVijay = (lower === 'vijay@aerospec.com' && password === 'vijay@2007') || (lower === 'bikkinavijay0@gmail.com' && password === 'ans14');
+        const isUser = lower === 'user@aerospec.com' && password === 'user123';
+
+        if (isAditya || isVijay || isUser) {
+          const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
+          setDeliveryInfo({ mode: 'DEV_SIMULATION', otpPreview: mockCode, previewUrl: null });
+          setOtpStep(true);
+          setResendTimer(30);
+          setCanResend(false);
+          return;
+        }
       }
 
-      setError(err.message || 'Invalid email or password. Please try again.');
+      if (err.message === 'BACKEND_OFFLINE' || err.message?.includes('<!doctype') || err.message?.includes('Unexpected token')) {
+        setError('Backend API server is offline or unreachable. Please try again.');
+      } else {
+        setError(err.message || 'Unable to send OTP email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -98,12 +123,16 @@ export default function Login() {
     setError('');
 
     try {
-      const otpRes = await fetch('/api/auth/send-otp', {
+      const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type: 'LOGIN' })
       });
-      const otpData = await otpRes.json();
+      const otpData = await safeParseJson(otpRes);
+
+      if (!otpRes.ok || !otpData.success) {
+        throw new Error(otpData.message || 'Unable to send OTP email. Please try again.');
+      }
 
       setDeliveryInfo({
         mode: otpData.deliveryMode || 'LIVE_SMTP',
@@ -114,7 +143,14 @@ export default function Login() {
       setResendTimer(30);
       setCanResend(false);
     } catch (err) {
-      setError('Could not resend OTP. Please try again.');
+      if (!import.meta.env.PROD && deliveryInfo.mode === 'DEV_SIMULATION') {
+        const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
+        setDeliveryInfo(prev => ({ ...prev, otpPreview: mockCode }));
+        setResendTimer(30);
+        setCanResend(false);
+      } else {
+        setError(err.message || 'Unable to send OTP email. Please try again.');
+      }
     } finally {
       setResending(false);
     }
@@ -127,13 +163,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: otpCode.trim(), action: 'LOGIN' })
       });
 
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid 2FA OTP.');
       }
@@ -146,10 +182,11 @@ export default function Login() {
         navigate('/user/dashboard');
       }
     } catch (err) {
-      // Fallback verification for offline dev
-      if (deliveryInfo.otpPreview && otpCode.trim() === deliveryInfo.otpPreview) {
-        const isVijayAdmin = email.toLowerCase() === 'vijay@aerospec.com';
-        const isAdityaAdmin = email.toLowerCase() === 'aditya@aerospec.com';
+      // Fallback verification for offline local dev only
+      if (!import.meta.env.PROD && deliveryInfo.otpPreview && otpCode.trim() === deliveryInfo.otpPreview) {
+        const lower = email.toLowerCase().trim();
+        const isVijayAdmin = lower === 'vijay@aerospec.com' || lower === 'bikkinavijay0@gmail.com';
+        const isAdityaAdmin = lower === 'aditya@aerospec.com' || lower === 'adityalap007@gmail.com';
         const isAdmin = isVijayAdmin || isAdityaAdmin;
 
         const authUser = {
@@ -167,13 +204,55 @@ export default function Login() {
         return;
       }
 
-      setError(err.message || 'Invalid 6-digit OTP code.');
+      if (err.message === 'BACKEND_OFFLINE') {
+        setError('Backend server unreachable. Please verify connection.');
+      } else {
+        setError(err.message || 'Invalid 6-digit OTP code.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Phase 3: Firebase Google Authentication
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      const u = result.user;
+      const emailLower = (u.email || '').toLowerCase().trim();
+      const isVijayAdmin = emailLower === 'vijay@aerospec.com' || emailLower === 'bikkinavijay0@gmail.com';
+      const isAdityaAdmin = emailLower === 'aditya@aerospec.com' || emailLower === 'adityalap007@gmail.com';
+      const isAdmin = isVijayAdmin || isAdityaAdmin;
+
+      const authUser = {
+        name: u.displayName || (isVijayAdmin ? 'System Admin Vijay' : isAdityaAdmin ? 'System Admin Aditya' : emailLower.split('@')[0]),
+        email: u.email,
+        role: isAdmin ? 'admin' : 'user',
+        photoURL: u.photoURL,
+        uid: u.uid,
+        authProvider: 'firebase-google'
+      };
+
+      localStorage.setItem('aerospec_user', JSON.stringify(authUser));
+
+      if (isAdmin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/user/dashboard');
+      }
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Firebase Google Sign-In failed.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const setAdminVijay = () => {
+
     setEmail('vijay@aerospec.com');
     setPassword('vijay@2007');
     setError('');
@@ -215,7 +294,7 @@ export default function Login() {
             </span>
             <h1 className="card-title">{otpStep ? 'Enter Verification Code' : 'Sign In to AeroSpec'}</h1>
             <p className="card-desc">
-              {otpStep 
+              {otpStep
                 ? `An official 6-digit authorization code was dispatched to ${email}.`
                 : 'Sign in with your email & password. Role-based routing directs to Operator or Admin Center.'}
             </p>
@@ -273,11 +352,52 @@ export default function Login() {
                   </>
                 )}
               </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 14px', gap: '12px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255, 237, 214, 0.1)' }} />
+                <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#8c857b', letterSpacing: '1px' }}>OR INSTANT ACCESS</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255, 237, 214, 0.1)' }} />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '12px 18px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 237, 214, 0.15)',
+                  borderRadius: '8px',
+                  color: '#ffedd6',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  letterSpacing: '1px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.borderColor = 'rgba(255, 87, 34, 0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.borderColor = 'rgba(255, 237, 214, 0.15)'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                CONTINUE WITH GOOGLE (FIREBASE)
+              </button>
             </form>
+
           ) : (
             /* ── STEP 2: 2FA REAL EMAIL OTP INPUT ── */
             <form onSubmit={handleVerify2FA} className="login-form">
-              
+
               {/* Real Email Dispatch Notification */}
               <div style={{ padding: '14px 16px', background: 'rgba(0, 245, 255, 0.07)', border: '1px solid rgba(0, 245, 255, 0.25)', borderRadius: '10px', fontSize: '12px', color: '#ffedd6', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -347,7 +467,7 @@ export default function Login() {
                     {resending ? 'Sending...' : canResend ? 'Resend OTP' : `Resend in ${resendTimer}s`}
                   </button>
                 </div>
-                
+
                 <input
                   type="text"
                   maxLength={6}

@@ -16,6 +16,7 @@ import {
   University
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import './ContactSection.css';
 
 export default function ContactSection() {
   const navigate = useNavigate();
@@ -50,13 +51,32 @@ export default function ContactSection() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.message) return;
 
     setStatus('transmitting');
+    const generatedId = `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`;
+
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callsign: formData.callsign,
+          email: formData.email,
+          organization: formData.organization,
+          priority: priority,
+          band: band,
+          message: formData.message,
+          id: generatedId
+        })
+      });
+    } catch {
+      // Continue with offline/simulation receipt if backend offline
+    }
+
     setTimeout(() => {
-      const generatedId = `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`;
       setReceipt({
         id: generatedId,
         timestamp: new Date().toUTCString(),
@@ -66,7 +86,7 @@ export default function ContactSection() {
         email: formData.email
       });
       setStatus('sent');
-    }, 1200);
+    }, 1000);
   };
 
   const handleReset = () => {
