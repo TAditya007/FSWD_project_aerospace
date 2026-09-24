@@ -26,6 +26,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cloud / Render Health Check Endpoints
+app.get('/api', (req, res) => {
+  return res.json({ status: 'ok', service: 'AeroSpace API Backend', version: '1.0.0' });
+});
+
+app.get('/api/health', (req, res) => {
+  return res.json({ status: 'healthy', uptime: process.uptime() });
+});
+
+
 // ════════════════════════════════════════════
 // 1. AUTHENTICATION & 2FA EMAIL OTP
 // ════════════════════════════════════════════
@@ -760,14 +770,45 @@ app.get('/api/user/reports', (req, res) => {
   return res.json({ success: true, data: reports });
 });
 
+// ════════════════════════════════════════════
+// 12. CONTACT OPERATIONS & MISSION DISPATCH
+// ════════════════════════════════════════════
+app.post('/api/contact', (req, res) => {
+  const { callsign, email, organization, priority, band, message, id } = req.body;
+  if (!email || !message) {
+    return res.status(400).json({ success: false, message: 'Email and mission message are required.' });
+  }
+
+  const dispatch = db.createContactMessage({
+    id: id || `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`,
+    callsign: callsign || 'Anonymous Operator',
+    email,
+    organization: organization || 'Independent',
+    priority: priority || 'Routine Inquiry',
+    band: band || 'S-Band',
+    message
+  });
+
+  return res.status(201).json({
+    success: true,
+    data: dispatch,
+    message: 'Mission dispatch received and logged by Ground Station Alpha.'
+  });
+});
+
+app.get('/api/contact', (req, res) => {
+  const messages = db.getContactMessages();
+  return res.json({ success: true, data: messages });
+});
+
 import { pathToFileURL } from 'url';
 
 export { app };
 export default app;
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isDirectExecution && process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 AeroSpace API Backend running on http://localhost:${PORT}`);
+if ((isDirectExecution || process.env.RENDER || process.env.PORT) && process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 AeroSpace API Backend running on http://0.0.0.0:${PORT}`);
   });
 }

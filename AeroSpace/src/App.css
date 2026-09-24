@@ -123,6 +123,21 @@
   box-shadow: 0 4px 16px rgba(255, 237, 214, 0.25);
 }
 
+.btn.is-cyan {
+  background: rgba(0, 245, 255, 0.1);
+  color: #00f5ff;
+  border: 1px solid rgba(0, 245, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 245, 255, 0.15);
+  font-weight: 600;
+}
+
+.btn.is-cyan:hover {
+  background: rgba(0, 245, 255, 0.2);
+  border-color: #00f5ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 245, 255, 0.35);
+}
+
 /* ═══════════════════════════════
    NAVBAR (Glass, fixed on top)
    ═══════════════════════════════ */

@@ -1013,5 +1013,28 @@ export const db = {
   getAdminActions: () => {
     const data = readDb();
     return data.admin_actions || [];
+  },
+
+  getContactMessages: () => {
+    const data = readDb();
+    return data.contact_messages || [];
+  },
+
+  createContactMessage: (msg) => {
+    const data = readDb();
+    if (!data.contact_messages) data.contact_messages = [];
+    const item = {
+      id: msg.id || `TX-${Date.now()}-AERO`,
+      callsign: msg.callsign || 'Anonymous Operator',
+      email: msg.email,
+      organization: msg.organization || 'Independent',
+      priority: msg.priority || 'Routine',
+      band: msg.band || 'S-Band',
+      message: msg.message,
+      createdAt: new Date().toISOString()
+    };
+    data.contact_messages.unshift(item);
+    writeDb(data);
+    return item;
   }
 };

@@ -25,7 +25,8 @@ import {
   Eye, 
   Code,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  ArrowUp
 } from 'lucide-react';
 import SpaceScene from '../components/home/SpaceScene';
 import Navbar from '../components/Navbar';
@@ -115,6 +116,10 @@ export default function Home() {
     navigator.clipboard.writeText(window.location.href);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const categories = [
@@ -774,15 +779,9 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-          STAGE 6 / SECTION 7: CONTACT OPERATIONS & MISSION DISPATCH (#contact)
+          STAGE 6: MISSION HORIZON & CREW INVITATION
          ════════════════════════════════════════════════════════════ */}
-      <ContactSection />
-
-      {/* ════════════════════════════════════════════════════════════
-          STAGE 7 / SECTION 8: FINAL MISSION CLOSING & DISCLAIMER (#footer)
-          Preserving the satirical closing concept, Join Crew & Copy URL
-         ════════════════════════════════════════════════════════════ */}
-      <footer id="footer" className="home-stage-footer">
+      <section className="home-stage-closing">
         <div className="home-container">
           <div className="footer-hud-box">
             
@@ -800,10 +799,21 @@ export default function Home() {
               AeroSpace Creative Lab // Next-Generation Mission Interfaces
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', margin: '32px 0 36px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', margin: '32px 0 24px', flexWrap: 'wrap' }}>
               <button className="btn is-orange" onClick={() => navigate('/signup')}>
                 <span>Join Mission Crew</span>
                 <ArrowRight size={15} />
+              </button>
+
+              <button 
+                className="btn is-cyan" 
+                onClick={() => {
+                  const el = document.getElementById('contact');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Radio size={14} />
+                <span>Contact Mission Operations</span>
               </button>
               
               <button className="btn is-dark" onClick={handleCopyUrl}>
@@ -812,11 +822,39 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="o-dashline" style={{ maxWidth: '800px', margin: '0 auto 24px' }} />
+            <div className="o-dashline" style={{ maxWidth: '800px', margin: '0 auto 20px' }} />
 
             <div className="footer-disclaimer-note">
-              This entire site is a fictional creative project by AeroSpace. AeroSpec doesn't exist. 
-              No products are for sale. All claims are satirical and for entertainment purposes only.
+              Ready to deploy your aerospace telemetry dashboard, avionics system, or satellite relay? Transmit your flight brief below.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          STAGE 7: CONTACT US (AT THE LAST IN THE HOME PAGE) (#contact)
+         ════════════════════════════════════════════════════════════ */}
+      <ContactSection />
+
+      {/* ════════════════════════════════════════════════════════════
+          BOTTOM SYSTEM FOOTER BAR
+         ════════════════════════════════════════════════════════════ */}
+      <footer id="footer" className="home-terminal-footer">
+        <div className="home-container">
+          <div className="terminal-footer-inner">
+            <div className="terminal-footer-disclaimer">
+              <strong>Mission Disclaimer:</strong> This entire site is a fictional creative parody project by AeroSpace. AeroSpec doesn't exist. No products are for sale. All extreme aerodynamic claims are for entertainment & inspiration purposes only.
+            </div>
+
+            <div className="terminal-footer-meta-row">
+              <div className="terminal-footer-left">
+                <span className="live-dot-cyan" />
+                <span>© {new Date().getFullYear()} AeroSpace Technologies Inc. · KLH University, Hyderabad. All rights reserved.</span>
+              </div>
+              <button className="btn-back-to-top" onClick={scrollToTop} aria-label="Back to Top">
+                <span>BACK TO ORBIT</span>
+                <ArrowUp size={14} />
+              </button>
             </div>
           </div>
         </div>

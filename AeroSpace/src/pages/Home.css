@@ -635,11 +635,11 @@
 }
 
 /* ════════════════════════════════════════════
-   STAGE 6: FINAL MISSION CTA
+   STAGE 6: MISSION HORIZON CLOSING CTA
    ════════════════════════════════════════════ */
+.home-stage-closing,
 .home-stage-footer {
-  min-height: 80vh;
-  padding: 100px 0 60px;
+  padding: 80px 0 40px;
   display: flex;
   align-items: center;
   position: relative;
@@ -686,12 +686,83 @@
 }
 
 .footer-disclaimer-note {
+  font-size: 12px;
+  color: #c9bbaa;
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto;
+  font-family: var(--font-mono, monospace);
+}
+
+/* ════════════════════════════════════════════
+   TERMINAL BOTTOM SYSTEM FOOTER BAR
+   ════════════════════════════════════════════ */
+.home-terminal-footer {
+  position: relative;
+  z-index: 10;
+  padding: 36px 0 44px;
+  background: rgba(2, 6, 16, 0.95);
+  border-top: 1px solid rgba(0, 245, 255, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+.terminal-footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.terminal-footer-disclaimer {
   font-size: 11px;
   color: #8c857b;
   line-height: 1.6;
-  max-width: 600px;
-  margin: 0 auto;
   font-family: var(--font-mono, monospace);
+  text-align: center;
+  padding: 0 16px;
+}
+
+.terminal-footer-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.terminal-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: #c9bbaa;
+}
+
+.btn-back-to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: rgba(0, 245, 255, 0.08);
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  color: #00f5ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back-to-top:hover {
+  background: rgba(0, 245, 255, 0.2);
+  border-color: #00f5ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 245, 255, 0.25);
 }
 
 /* ════════════════════════════════════════════
