@@ -35,7 +35,10 @@ async function getTransporter() {
       if (service === 'gmail' || host === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
         transporter = nodemailer.createTransport({
           service: 'gmail',
-          auth: { user, pass: cleanPass }
+          auth: { user, pass: cleanPass },
+          connectionTimeout: 5000,
+          greetingTimeout: 5000,
+          socketTimeout: 8000
         });
         if (!isProduction) {
           console.log(`📡 [MAILER] Initialized Real Gmail SMTP Transport for: ${user}`);
@@ -45,7 +48,10 @@ async function getTransporter() {
           host: host,
           port: port,
           secure: secure,
-          auth: { user, pass: cleanPass }
+          auth: { user, pass: cleanPass },
+          connectionTimeout: 5000,
+          greetingTimeout: 5000,
+          socketTimeout: 8000
         });
         if (!isProduction) {
           console.log(`📡 [MAILER] Initialized Custom SMTP Transport: ${host}:${port} (${user})`);
@@ -190,7 +196,121 @@ function buildOtpEmailHtml({ email, otp, type, name }) {
 }
 
 /**
+ * Send Real Email via Brevo REST API over HTTPS (Port 443)
+ * Operates over standard HTTPS REST - completely immune to Render/cloud SMTP port blocking.
+ */
+async function sendViaBrevo({ to, subject, html, text, name }) {
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
+  if (!apiKey) {
+    throw new Error('BREVO_API_KEY is not configured.');
+  }
+
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || OFFICIAL_SENDER_NAME;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: to, name: name || 'Operator' }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Brevo API Error (${response.status}): ${data.message || JSON.stringify(data)}`);
+    }
+
+    return {
+      success: true,
+      sender: `"${senderName}" <${senderEmail}>`,
+      mode: 'BREVO_REST_HTTPS',
+      messageId: data.messageId,
+      recipient: to
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Brevo HTTPS request timed out after 12 seconds.');
+    }
+    throw err;
+  }
+}
+
+/**
+ * Send Real Email via Resend REST API over HTTPS (Port 443)
+ * Alternative HTTPS email provider.
+ */
+async function sendViaResend({ to, subject, html, text, name }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured.');
+  }
+
+  const senderEmail = process.env.RESEND_SENDER_EMAIL || process.env.SMTP_FROM || `"${OFFICIAL_SENDER_NAME}" <${OFFICIAL_SENDER_EMAIL}>`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: senderEmail,
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Resend API Error (${response.status}): ${data.message || JSON.stringify(data)}`);
+    }
+
+    return {
+      success: true,
+      sender: senderEmail,
+      mode: 'RESEND_REST_HTTPS',
+      messageId: data.id,
+      recipient: to
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Resend HTTPS request timed out after 12 seconds.');
+    }
+    throw err;
+  }
+}
+
+/**
  * Send Real OTP Email
+ * Dispatches via HTTPS REST API (Brevo / Resend) in cloud environments where SMTP is blocked,
+ * or falls back to local Nodemailer SMTP / test account.
  */
 export async function sendOTPEmail({ to, otp, type = 'LOGIN', name = 'Operator' }) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -199,23 +319,80 @@ export async function sendOTPEmail({ to, otp, type = 'LOGIN', name = 'Operator' 
   if (!recipient || !recipient.includes('@')) {
     return {
       success: false,
-      sender: process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL,
+      sender: process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL,
       error: 'Valid recipient email address is required.',
       mode: 'FAILED',
       recipient
     };
   }
 
+  const subject = `[${otp}] Your AeroSpace 2FA Verification Code`;
+  const html = buildOtpEmailHtml({ email: recipient, otp, type, name });
+  const text = `AeroSpace 2FA Security Code: ${otp}. Valid for 10 minutes. Sent from ${process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL}. If you did not request this, please ignore.`;
+
+  // ── PRIORITY 1: Brevo REST API over HTTPS (Port 443) ──
+  // Recommended for Render Free Web Services where outbound SMTP (ports 25, 465, 587) is blocked
+  if (process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim() !== '') {
+    try {
+      const result = await sendViaBrevo({ to: recipient, subject, html, text, name });
+      if (!isProduction) {
+        console.log(`\n══════════════════════════════════════════════════════`);
+        console.log(`🚀 [BREVO HTTPS DISPATCH SUCCESS]`);
+        console.log(` Sender:     ${result.sender}`);
+        console.log(` Mode:       BREVO_REST_HTTPS (Port 443)`);
+        console.log(` Recipient:  ${recipient}`);
+        console.log(` OTP Code:   [ ${otp} ]`);
+        console.log(` Message ID: ${result.messageId}`);
+        console.log(`══════════════════════════════════════════════════════\n`);
+      } else {
+        console.log(`[MAILER] OTP email dispatched via Brevo HTTPS to ${recipient} (Message ID: ${result.messageId || 'N/A'})`);
+      }
+      return result;
+    } catch (brevoErr) {
+      console.error(`❌ [BREVO ERROR] Failed to send via Brevo HTTPS:`, brevoErr.message);
+      if (isProduction) {
+        return {
+          success: false,
+          sender: process.env.BREVO_SENDER_EMAIL || OFFICIAL_SENDER_EMAIL,
+          error: 'Unable to send OTP email via Brevo. Please check your Brevo configuration.',
+          mode: 'FAILED',
+          recipient
+        };
+      }
+    }
+  }
+
+  // ── PRIORITY 2: Resend REST API over HTTPS (Port 443) ──
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      const result = await sendViaResend({ to: recipient, subject, html, text, name });
+      if (!isProduction) {
+        console.log(`🚀 [RESEND HTTPS DISPATCH SUCCESS] to ${recipient}, OTP: [ ${otp} ]`);
+      } else {
+        console.log(`[MAILER] OTP email dispatched via Resend HTTPS to ${recipient} (Message ID: ${result.messageId || 'N/A'})`);
+      }
+      return result;
+    } catch (resendErr) {
+      console.error(`❌ [RESEND ERROR] Failed to send via Resend HTTPS:`, resendErr.message);
+      if (isProduction) {
+        return {
+          success: false,
+          sender: process.env.RESEND_SENDER_EMAIL || OFFICIAL_SENDER_EMAIL,
+          error: 'Unable to send OTP email via Resend.',
+          mode: 'FAILED',
+          recipient
+        };
+      }
+    }
+  }
+
+  // ── PRIORITY 3: Nodemailer SMTP / Local Development Fallback ──
   try {
     const { transport, mode, sender } = await getTransporter();
 
     if (isProduction && mode !== 'LIVE_SMTP') {
-      throw new Error('Production email dispatch requires active SMTP configuration.');
+      throw new Error('Production email dispatch requires BREVO_API_KEY (or RESEND_API_KEY) in Render environment variables.');
     }
-
-    const subject = `[${otp}] Your AeroSpace 2FA Verification Code`;
-    const html = buildOtpEmailHtml({ email: recipient, otp, type, name });
-    const text = `AeroSpace 2FA Security Code: ${otp}. Valid for 10 minutes. Sent from ${process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL}. If you did not request this, please ignore.`;
 
     const mailOptions = {
       from: sender || process.env.SMTP_FROM || DEFAULT_SENDER,
@@ -241,8 +418,7 @@ export async function sendOTPEmail({ to, otp, type = 'LOGIN', name = 'Operator' 
       }
       console.log(`══════════════════════════════════════════════════════\n`);
     } else {
-      // Production telemetry: Log only safe info - NEVER log OTP or secrets!
-      console.log(`[MAILER] OTP email successfully dispatched to ${recipient} (Message ID: ${info.messageId || 'N/A'})`);
+      console.log(`[MAILER] OTP email dispatched via SMTP to ${recipient} (Message ID: ${info.messageId || 'N/A'})`);
     }
 
     return {
@@ -261,7 +437,7 @@ export async function sendOTPEmail({ to, otp, type = 'LOGIN', name = 'Operator' 
     }
     return {
       success: false,
-      sender: process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL,
+      sender: process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL,
       error: isProduction ? 'Unable to send OTP email. Please try again.' : err.message,
       mode: 'FAILED',
       recipient: recipient

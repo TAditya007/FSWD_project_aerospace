@@ -8,6 +8,7 @@ import {
 import './PaymentGateway.css';
 
 import { PLAN_CONFIG as TIERS } from '../config/plans';
+import { VITE_API_URL } from '../config/api';
 
 const OFFICIAL_UPI_ID = '9866606967@superyes';
 const OFFICIAL_OTP_EMAIL = 'bikkinavijay0@gmail.com';
@@ -79,8 +80,6 @@ export default function PaymentGateway() {
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
-  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
   // Helper to safely parse JSON responses
   const safeParseJson = async (response) => {
     const contentType = response.headers.get('content-type') || '';
@@ -96,7 +95,7 @@ export default function PaymentGateway() {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/payment/send-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/payment/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, name: user.name || 'Flight Operator' })
@@ -139,7 +138,7 @@ export default function PaymentGateway() {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/payment/verify-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/payment/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, otp: otpCode.trim() })
@@ -174,7 +173,7 @@ export default function PaymentGateway() {
     const finalUtr = utrInput.trim() || `${Math.floor(400000000000 + Math.random() * 500000000000)}`;
 
     try {
-      const res = await fetch('/api/payment/submit', {
+      const res = await fetch(`${VITE_API_URL}/api/payment/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

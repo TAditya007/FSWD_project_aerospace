@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, KeyRound, ArrowRight, RefreshCw, ExternalLink, ShieldCheck } from 'lucide-react';
 import { signInWithGoogle } from '../config/firebase';
+import { VITE_API_URL } from '../config/api';
 import './auth.css';
 
 
@@ -52,8 +53,6 @@ export default function Signup() {
     setServerError('');
   };
 
-  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
   // Helper to safely parse JSON responses from backend
   const safeParseJson = async (response) => {
     const contentType = response.headers.get('content-type') || '';
@@ -75,7 +74,7 @@ export default function Signup() {
     setServerError('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, type: 'SIGNUP', name: form.name })
@@ -118,7 +117,7 @@ export default function Signup() {
     setServerError('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, type: 'SIGNUP', name: form.name })
@@ -158,7 +157,7 @@ export default function Signup() {
     setServerError('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

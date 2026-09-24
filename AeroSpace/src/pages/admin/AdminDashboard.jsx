@@ -12,6 +12,7 @@ import { PLAN_CONFIG } from '../../config/plans';
 import { useMissionControl } from '../../components/AuthenticatedLayout';
 import { THEMES, DEFAULT_THEME_ID } from '../../config/themes';
 import DataSheetModal from '../../components/DataSheetModal';
+import { VITE_API_URL } from '../../config/api';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -90,11 +91,11 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const [uRes, lRes, sRes, pRes, oRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/logs'),
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/payments'),
-        fetch('/api/admin/otp-logs')
+        fetch(`${VITE_API_URL}/api/admin/users`),
+        fetch(`${VITE_API_URL}/api/admin/logs`),
+        fetch(`${VITE_API_URL}/api/admin/stats`),
+        fetch(`${VITE_API_URL}/api/admin/payments`),
+        fetch(`${VITE_API_URL}/api/admin/otp-logs`)
       ]);
 
       if (uRes.ok) {
@@ -153,7 +154,7 @@ export default function AdminDashboard() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${VITE_API_URL}/api/admin/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUserData)
@@ -188,7 +189,7 @@ export default function AdminDashboard() {
     if (!selectedUserForEdit) return;
 
     try {
-      const res = await fetch(`/api/admin/users/${selectedUserForEdit.id}`, {
+      const res = await fetch(`${VITE_API_URL}/api/admin/users/${selectedUserForEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editUserData)
@@ -213,7 +214,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Are you sure you want to permanently delete user account ${userEmail}?`)) return;
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      const res = await fetch(`${VITE_API_URL}/api/admin/users/${userId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setStatusMsg(`User account ${userEmail} deleted.`);
@@ -230,7 +231,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Authorize & APPROVE Subscription payment #${paymentId}?\nThis will immediately grant the user an Active subscription tier.`)) return;
     setActionLoading(prev => ({ ...prev, [paymentId]: 'approving' }));
     try {
-      const res = await fetch(`/api/admin/payments/${paymentId}/approve`, {
+      const res = await fetch(`${VITE_API_URL}/api/admin/payments/${paymentId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminEmail: currentUser.email || 'vijay@aerospec.com' })
@@ -251,7 +252,7 @@ export default function AdminDashboard() {
     if (reason === null) return;
     setActionLoading(prev => ({ ...prev, [paymentId]: 'rejecting' }));
     try {
-      const res = await fetch(`/api/admin/payments/${paymentId}/reject`, {
+      const res = await fetch(`${VITE_API_URL}/api/admin/payments/${paymentId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminEmail: currentUser.email || 'vijay@aerospec.com', reason })
@@ -1083,7 +1084,7 @@ export default function AdminDashboard() {
                         style={{ marginTop: 'auto', padding: '8px 12px', fontSize: '11px' }}
                         onClick={async () => {
                           try {
-                            const res = await fetch('/api/saas/billing/upgrade', {
+                            const res = await fetch(`${VITE_API_URL}/api/saas/billing/upgrade`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ planTier: tier.id })

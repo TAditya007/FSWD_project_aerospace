@@ -14,6 +14,7 @@ import { THEMES, DEFAULT_THEME_ID } from '../../config/themes';
 import EmailChangeModal from '../../components/EmailChangeModal';
 import PasswordChangeModal from '../../components/PasswordChangeModal';
 import DataSheetModal from '../../components/DataSheetModal';
+import { VITE_API_URL } from '../../config/api';
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -134,14 +135,14 @@ export default function UserDashboard() {
     setLoading(true);
     try {
       const fetchPromises = [
-        fetch('/api/saas/tenant'),
-        fetch('/api/saas/pods'),
-        fetch('/api/saas/missions'),
-        fetch('/api/user/reports')
+        fetch(`${VITE_API_URL}/api/saas/tenant`),
+        fetch(`${VITE_API_URL}/api/saas/pods`),
+        fetch(`${VITE_API_URL}/api/saas/missions`),
+        fetch(`${VITE_API_URL}/api/user/reports`)
       ];
 
       if (user.email) {
-        fetchPromises.push(fetch(`/api/auth/me?email=${encodeURIComponent(user.email)}`));
+        fetchPromises.push(fetch(`${VITE_API_URL}/api/auth/me?email=${encodeURIComponent(user.email)}`));
       }
 
       const results = await Promise.all(fetchPromises);
@@ -225,7 +226,7 @@ export default function UserDashboard() {
 
   const fetchPodHistory = async (podId) => {
     try {
-      const res = await fetch(`/api/saas/pods/${podId}/history`);
+      const res = await fetch(`${VITE_API_URL}/api/saas/pods/${podId}/history`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) setPodHistory(data.data);
@@ -251,7 +252,7 @@ export default function UserDashboard() {
     const finalUtr = utrInput.trim() || `${Math.floor(400000000000 + Math.random() * 500000000000)}`;
 
     try {
-      const res = await fetch('/api/user/subscribe', {
+      const res = await fetch(`${VITE_API_URL}/api/user/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -324,7 +325,7 @@ export default function UserDashboard() {
     e.preventDefault();
     setErrorMsg('');
     try {
-      const res = await fetch('/api/saas/pods', {
+      const res = await fetch(`${VITE_API_URL}/api/saas/pods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPodData)
@@ -347,7 +348,7 @@ export default function UserDashboard() {
   const handleScheduleMission = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/saas/missions', {
+      const res = await fetch(`${VITE_API_URL}/api/saas/missions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -371,7 +372,7 @@ export default function UserDashboard() {
 
   const handleUpdateMissionStatus = async (missionId, nextStatus, nextPct) => {
     try {
-      const res = await fetch(`/api/saas/missions/${missionId}/status`, {
+      const res = await fetch(`${VITE_API_URL}/api/saas/missions/${missionId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus, progressPct: nextPct })

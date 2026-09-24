@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import SpaceEnvironment from './SpaceEnvironment';
 import { generateSatelliteIdentity } from '../utils/satelliteIdentity';
 import { getTheme, applyThemeToDOM, DEFAULT_THEME_ID } from '../config/themes';
+import { VITE_API_URL } from '../config/api';
 
 const AuthenticatedContext = createContext(null);
 
@@ -41,7 +42,7 @@ export default function AuthenticatedLayout({ children }) {
     // Attempt to persist to backend user profile if authenticated
     if (user.email) {
       try {
-        await fetch('/api/user/theme', {
+        await fetch(`${VITE_API_URL}/api/user/theme`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: user.email, theme: newThemeId })

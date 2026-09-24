@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Lock, Mail, ArrowRight, KeyRound, CheckCircle, RefreshCw, ExternalLink, Sparkles } from 'lucide-react';
 import { signInWithGoogle } from '../config/firebase';
+import { VITE_API_URL } from '../config/api';
 import './auth.css';
 
 
@@ -36,8 +37,6 @@ export default function Login() {
     return () => clearInterval(timer);
   }, [otpStep, resendTimer]);
 
-  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
   // Helper to safely parse JSON responses from backend
   const safeParseJson = async (response) => {
     const contentType = response.headers.get('content-type') || '';
@@ -55,7 +54,7 @@ export default function Login() {
 
     try {
       // 1. Verify credentials against DB
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`${VITE_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -68,7 +67,7 @@ export default function Login() {
       }
 
       // 2. Dispatch real 2FA OTP via nodemailer
-      const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const otpRes = await fetch(`${VITE_API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type: 'LOGIN' })
@@ -123,7 +122,7 @@ export default function Login() {
     setError('');
 
     try {
-      const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const otpRes = await fetch(`${VITE_API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type: 'LOGIN' })
@@ -163,7 +162,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: otpCode.trim(), action: 'LOGIN' })

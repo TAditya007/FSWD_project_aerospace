@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Lock, CheckCircle, AlertTriangle, KeyRound, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
+import { VITE_API_URL } from '../config/api';
 
 export default function PasswordChangeModal({ 
   isOpen,
@@ -48,7 +49,7 @@ export default function PasswordChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/user/password/request-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/user/password/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,7 +85,7 @@ export default function PasswordChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/user/password/verify-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/user/password/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

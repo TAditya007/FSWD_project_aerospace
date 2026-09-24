@@ -16,6 +16,7 @@ import {
   University
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { VITE_API_URL } from '../config/api';
 import './ContactSection.css';
 
 export default function ContactSection() {
@@ -59,7 +60,7 @@ export default function ContactSection() {
     const generatedId = `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`;
 
     try {
-      await fetch('/api/contact', {
+      await fetch(`${VITE_API_URL}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

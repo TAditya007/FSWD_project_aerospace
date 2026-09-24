@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, CheckCircle, AlertTriangle, KeyRound, ArrowRight, ShieldCheck, X } from 'lucide-react';
+import { VITE_API_URL } from '../config/api';
 
 export default function EmailChangeModal({ 
   isOpen,
@@ -21,8 +22,6 @@ export default function EmailChangeModal({
   const [deliveryMode, setDeliveryMode] = useState('');
   const [otpPreview, setOtpPreview] = useState('');
 
-  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
   const handleRequestOtp = async (e) => {
     e.preventDefault();
     setError('');
@@ -39,7 +38,7 @@ export default function EmailChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/user/email/request-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/user/email/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,7 +75,7 @@ export default function EmailChangeModal({
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/user/email/verify-otp`, {
+      const res = await fetch(`${VITE_API_URL}/api/user/email/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
