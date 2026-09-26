@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Radio, Activity, Wifi, Cpu, LogOut, User, ChevronDown, Bell, Settings,
@@ -7,6 +7,7 @@ import {
   QrCode, Smartphone, Building2, Wallet, Copy, Receipt, ExternalLink, Sparkles,
   Lock, Key, Mail, Globe, Palette, FileSpreadsheet
 } from 'lucide-react';
+import { io } from 'socket.io-client';
 import './UserDashboard.css';
 import { PLAN_CONFIG as PLAN_MAP } from '../../config/plans';
 import { useMissionControl } from '../../components/AuthenticatedLayout';
@@ -14,7 +15,9 @@ import { THEMES, DEFAULT_THEME_ID } from '../../config/themes';
 import EmailChangeModal from '../../components/EmailChangeModal';
 import PasswordChangeModal from '../../components/PasswordChangeModal';
 import DataSheetModal from '../../components/DataSheetModal';
-import { VITE_API_URL } from '../../config/api';
+import RfAnalyzerConsole from '../../components/RfAnalyzerConsole';
+import { generateDataSheetPayload, downloadJsonDataSheet, downloadCsvDataSheet, downloadReportFile } from '../../utils/dataSheetExporter';
+import { VITE_API_URL, SOCKET_URL } from '../../config/api';
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -38,6 +41,12 @@ export default function UserDashboard() {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [dataSheetModalOpen, setDataSheetModalOpen] = useState(false);
 
+  // Operator Name Change State
+  const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [newNameInput, setNewNameInput] = useState('');
+  const [nameLoading, setNameLoading] = useState(false);
+  const [nameError, setNameError] = useState('');
+
   // Active theme and satellite identity from Mission Control
   const activeThemeId = missionControl?.themeId || user.theme || DEFAULT_THEME_ID;
   const activeTheme = THEMES[activeThemeId] || THEMES[DEFAULT_THEME_ID];
@@ -52,9 +61,76 @@ export default function UserDashboard() {
     status: 'OPTIMAL LOCK'
   };
 
-  const handleSetTheme = (newThemeId) => {
-    if (missionControl?.setThemeId) {
-      missionControl.setThemeId(newThemeId);
+  // Persistent Theme Switcher (Persists to backend, updates state, and auto-closes selector only on success)
+  const handleSetTheme = async (newThemeId) => {
+    try {
+      // 1. Persist to backend DB
+      if (user.email) {
+        const res = await fetch(`${VITE_API_URL}/api/user/theme`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, theme: newThemeId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || 'Failed to save theme preference.');
+        }
+      }
+
+      // 2. Apply theme in 3D Mission Control
+      if (missionControl?.setThemeId) {
+        missionControl.setThemeId(newThemeId);
+      }
+
+      // 3. Update React user state and localStorage
+      const updatedUser = { ...user, theme: newThemeId };
+      setUser(updatedUser);
+      localStorage.setItem('aerospec_user', JSON.stringify(updatedUser));
+
+      // 4. Auto-close theme selector dropdown only after success
+      setThemePickerOpen(false);
+      setActionMsg(`Theme preference "${THEMES[newThemeId]?.name || newThemeId}" saved and applied.`);
+    } catch (err) {
+      setErrorMsg(err.message || 'Unable to save theme preference.');
+      // Keep panel open on error so user can retry!
+    }
+  };
+
+  // Change Operator User Name (Persists to backend, updates state/localStorage/navbar, auto-closes on success)
+  const handleSaveUserName = async (e) => {
+    e.preventDefault();
+    setNameError('');
+    const trimmed = (newNameInput || '').trim();
+    if (!trimmed) {
+      setNameError('Name cannot be empty.');
+      return;
+    }
+
+    setNameLoading(true);
+    try {
+      const res = await fetch(`${VITE_API_URL}/api/user/name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, name: trimmed })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || 'Failed to update operator name.');
+      }
+
+      // Persist across refresh / logout / login
+      const updatedUser = { ...user, name: trimmed };
+      setUser(updatedUser);
+      localStorage.setItem('aerospec_user', JSON.stringify(updatedUser));
+
+      // Auto-close editor only AFTER successful persistence
+      setNameModalOpen(false);
+      setActionMsg(`Operator name updated to "${trimmed}". Confirmation email dispatched.`);
+    } catch (err) {
+      // Keep editor open on failure, display error, allow retry
+      setNameError(err.message || 'Unable to update name. Please try again.');
+    } finally {
+      setNameLoading(false);
     }
   };
 
@@ -66,6 +142,11 @@ export default function UserDashboard() {
   const [missions, setMissions] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // CO5 Real-time WebSocket / MQTT Connection Status
+  // 'connected' | 'reconnecting' | 'disconnected'
+  const [streamStatus, setStreamStatus] = useState('disconnected');
+  const socketRef = useRef(null);
 
   // Modals & User Action State
   const [provisionModalOpen, setProvisionModalOpen] = useState(false);
@@ -113,6 +194,101 @@ export default function UserDashboard() {
       fetchPodHistory(selectedPodId);
     }
   }, [selectedPodId]);
+
+  // CO5 Real-time Telemetry Pipeline: Socket.io Client (MQTT-to-WebSocket bridge)
+  useEffect(() => {
+    let socket = null;
+    try {
+      socket = io(SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 20,
+        reconnectionDelay: 2000,
+        timeout: 10000
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        console.log('✓ [CO5] Socket.io connected to telemetry bridge:', socket.id);
+        setStreamStatus('connected');
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.warn('✗ [CO5] Socket.io disconnected:', reason);
+        setStreamStatus('disconnected');
+      });
+
+      socket.on('connect_error', () => {
+        setStreamStatus('reconnecting');
+      });
+
+      socket.on('reconnect_attempt', () => {
+        setStreamStatus('reconnecting');
+      });
+
+      socket.on('reconnect', () => {
+        console.log('✓ [CO5] Socket.io reconnected successfully');
+        setStreamStatus('connected');
+      });
+
+      socket.on('telemetry:stream', (frame) => {
+        if (!frame || !frame.podId) return;
+
+        // 1. Update pod list and activePod attributes
+        setPods((prevPods) => {
+          const podIndex = prevPods.findIndex((p) => p.id === frame.podId);
+          if (podIndex >= 0) {
+            const updated = [...prevPods];
+            updated[podIndex] = {
+              ...updated[podIndex],
+              ...frame,
+              altitudeFt: Number(frame.altitudeFt),
+              speedKmh: Number(frame.speedKmh),
+              rssiDBm: Number(frame.rssiDBm),
+              batteryPct: Number(frame.batteryPct),
+              temperatureC: Number(frame.temperatureC),
+              latitude: Number(frame.latitude),
+              longitude: Number(frame.longitude),
+              snrDB: Number(frame.snrDB)
+            };
+            return updated;
+          } else {
+            return [...prevPods, frame];
+          }
+        });
+
+        // 2. Append new reading to rolling chart history (bounded to 15 entries)
+        setPodHistory((prevHistory) => {
+          const newReading = {
+            id: `tlm_${Date.now()}`,
+            podId: frame.podId,
+            time: frame.time || new Date().toTimeString().split(' ')[0],
+            altitudeFt: Number(frame.altitudeFt) || 12450,
+            speedKmh: Number(frame.speedKmh) || 480,
+            rssiDBm: Number(frame.rssiDBm) || -62,
+            batteryPct: Number(frame.batteryPct) || 94
+          };
+          const next = [...prevHistory, newReading];
+          return next.slice(-15);
+        });
+      });
+    } catch (err) {
+      console.error('[CO5] Socket.io initialization failed:', err);
+      setStreamStatus('disconnected');
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('connect_error');
+        socket.off('reconnect_attempt');
+        socket.off('reconnect');
+        socket.off('telemetry:stream');
+        socket.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
   // QR Expiry countdown timer
   useEffect(() => {
@@ -465,9 +641,23 @@ export default function UserDashboard() {
 
         {/* Right: Actions */}
         <div className="ud-topbar-right">
-          <div className="ud-live-pill">
-            <span className="ud-live-dot" />
-            LIVE TELEMETRY
+          <div
+            className="ud-live-pill"
+            title={`Real-Time Telemetry: ${streamStatus.toUpperCase()}`}
+            style={{
+              borderColor: streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.4)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+              background: streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.08)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+              color: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444'
+            }}
+          >
+            <span
+              className="ud-live-dot"
+              style={{
+                background: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444',
+                boxShadow: streamStatus === 'connected' ? '0 0 8px #00f5ff' : 'none'
+              }}
+            />
+            {streamStatus === 'connected' ? 'STREAMING • MQTT / WEBSOCKET' : `MQTT / WEBSOCKET: ${streamStatus.toUpperCase()}`}
           </div>
 
           {/* Theme Switcher Quick Menu */}
@@ -556,6 +746,9 @@ export default function UserDashboard() {
                   <span className="ud-dropdown-email">{user.email || 'user@aerospec.com'}</span>
                 </div>
                 <div className="ud-dropdown-divider" />
+                <button className="ud-dropdown-item" onClick={() => { setNewNameInput(user.name || ''); setNameError(''); setNameModalOpen(true); setProfileOpen(false); }}>
+                  <User size={14} color="#00f5ff" /> Change Operator Name
+                </button>
                 <button className="ud-dropdown-item" onClick={() => { setDataSheetModalOpen(true); setProfileOpen(false); }}>
                   <FileSpreadsheet size={14} color="#00f5ff" /> Download Data Sheet
                 </button>
@@ -746,70 +939,128 @@ export default function UserDashboard() {
             </div>
 
             {/* Live Telemetry Trajectory Chart (SVG) */}
-            <div className="ud-chart-panel">
-              <div className="ud-chart-header">
-                <h3 className="ud-chart-title">
-                  <Activity size={18} color="#00f5ff" />
-                  Live Telemetry Trajectory — {activePod.callsign}
-                </h3>
-                <div className="ud-chart-legend">
-                  <div className="ud-legend-item">
-                    <span className="ud-legend-dot" style={{ background: '#00f5ff' }} />
-                    <span style={{ color: '#00f5ff' }}>Altitude (ft)</span>
+            {(() => {
+              const chartPoints = podHistory && podHistory.length >= 2 ? podHistory : [
+                { time: '17:20', altitudeFt: 10200, rssiDBm: -68 },
+                { time: '17:25', altitudeFt: 11100, rssiDBm: -65 },
+                { time: '17:30', altitudeFt: 11800, rssiDBm: -64 },
+                { time: '17:35', altitudeFt: 12200, rssiDBm: -63 },
+                { time: '17:40', altitudeFt: 12450, rssiDBm: -62 }
+              ];
+
+              const minAlt = Math.min(...chartPoints.map(p => Number(p.altitudeFt) || 12000)) - 100;
+              const maxAlt = Math.max(...chartPoints.map(p => Number(p.altitudeFt) || 13000)) + 100;
+              const altRange = Math.max(maxAlt - minAlt, 100);
+
+              const minRssi = Math.min(...chartPoints.map(p => Number(p.rssiDBm) || -75)) - 3;
+              const maxRssi = Math.max(...chartPoints.map(p => Number(p.rssiDBm) || -55)) + 3;
+              const rssiRange = Math.max(maxRssi - minRssi, 5);
+
+              const svgCoords = chartPoints.map((pt, idx) => {
+                const x = Math.round(50 + (idx * 700) / Math.max(chartPoints.length - 1, 1));
+                const altNorm = ((Number(pt.altitudeFt) || 12450) - minAlt) / altRange;
+                const yAlt = Math.round(165 - altNorm * 125);
+                const rssiNorm = ((Number(pt.rssiDBm) || -62) - minRssi) / rssiRange;
+                const yRssi = Math.round(165 - rssiNorm * 115);
+                return { x, yAlt, yRssi, time: pt.time };
+              });
+
+              const polylineAlt = svgCoords.map(c => `${c.x},${c.yAlt}`).join(' ');
+              const polygonAlt = `${svgCoords[0].x},180 ${polylineAlt} ${svgCoords[svgCoords.length - 1].x},180`;
+              const polylineRssi = svgCoords.map(c => `${c.x},${c.yRssi}`).join(' ');
+
+              return (
+                <div className="ud-chart-panel">
+                  <div className="ud-chart-header">
+                    <h3 className="ud-chart-title">
+                      <Activity size={18} color="#00f5ff" />
+                      Live Telemetry Trajectory — {activePod.callsign}
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono)',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        background: streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.12)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        color: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444',
+                        border: `1px solid ${streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.3)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        fontWeight: '600',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}>
+                        <span style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          background: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444'
+                        }} />
+                        {streamStatus === 'connected' ? 'STREAMING • MQTT / WEBSOCKET' : `STREAM: ${streamStatus.toUpperCase()}`}
+                      </span>
+                      <div className="ud-chart-legend">
+                        <div className="ud-legend-item">
+                          <span className="ud-legend-dot" style={{ background: '#00f5ff' }} />
+                          <span style={{ color: '#00f5ff' }}>Altitude (ft)</span>
+                        </div>
+                        <div className="ud-legend-item">
+                          <span className="ud-legend-dot" style={{ background: '#ff5722' }} />
+                          <span style={{ color: '#ff5722' }}>Signal RSSI (dBm)</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ud-legend-item">
-                    <span className="ud-legend-dot" style={{ background: '#ff5722' }} />
-                    <span style={{ color: '#ff5722' }}>Signal RSSI (dBm)</span>
+
+                  <div className="ud-chart-svg-wrap">
+                    <svg className="ud-chart-svg" viewBox="0 0 800 200" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#00f5ff" stopOpacity="0.35" />
+                          <stop offset="100%" stopColor="#00f5ff" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      <line x1="0" y1="50" x2="800" y2="50" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
+                      <line x1="0" y1="100" x2="800" y2="100" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
+                      <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
+
+                      <polygon
+                        points={polygonAlt}
+                        fill="url(#cyanGrad)"
+                      />
+                      <polyline
+                        points={polylineAlt}
+                        fill="none"
+                        stroke="#00f5ff"
+                        strokeWidth="3"
+                      />
+
+                      <polyline
+                        points={polylineRssi}
+                        fill="none"
+                        stroke="#ff5722"
+                        strokeWidth="2"
+                        strokeDasharray="5"
+                      />
+
+                      {svgCoords.map((c, idx) => (
+                        <circle key={idx} cx={c.x} cy={c.yAlt} r="5" fill="#00f5ff" stroke="#020208" strokeWidth="2" />
+                      ))}
+                    </svg>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8c857b' }}>
+                    {svgCoords.length <= 6
+                      ? svgCoords.map((c, i) => (
+                          <span key={i}>{c.time} {i === svgCoords.length - 1 ? '(LIVE)' : ''}</span>
+                        ))
+                      : [0, Math.floor(svgCoords.length * 0.25), Math.floor(svgCoords.length * 0.5), Math.floor(svgCoords.length * 0.75), svgCoords.length - 1].map((idx, i) => (
+                          <span key={i}>{svgCoords[idx]?.time} {idx === svgCoords.length - 1 ? '(LIVE)' : ''}</span>
+                        ))}
                   </div>
                 </div>
-              </div>
-
-              <div className="ud-chart-svg-wrap">
-                <svg className="ud-chart-svg" viewBox="0 0 800 200" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#00f5ff" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#00f5ff" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-
-                  <line x1="0" y1="50" x2="800" y2="50" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
-                  <line x1="0" y1="100" x2="800" y2="100" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
-                  <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,237,214,0.06)" strokeDasharray="4" />
-
-                  <polygon
-                    points="50,160 200,120 380,85 560,60 750,45 750,180 50,180"
-                    fill="url(#cyanGrad)"
-                  />
-                  <polyline
-                    points="50,160 200,120 380,85 560,60 750,45"
-                    fill="none"
-                    stroke="#00f5ff"
-                    strokeWidth="3"
-                  />
-
-                  <polyline
-                    points="50,140 200,135 380,128 560,125 750,120"
-                    fill="none"
-                    stroke="#ff5722"
-                    strokeWidth="2"
-                    strokeDasharray="5"
-                  />
-
-                  {[[50, 160], [200, 120], [380, 85], [560, 60], [750, 45]].map(([x, y], idx) => (
-                    <circle key={idx} cx={x} cy={y} r="5" fill="#00f5ff" stroke="#020208" strokeWidth="2" />
-                  ))}
-                </svg>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8c857b' }}>
-                <span>17:20 UTC</span>
-                <span>17:25 UTC</span>
-                <span>17:30 UTC</span>
-                <span>17:35 UTC</span>
-                <span>17:40 UTC (CURRENT)</span>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Hardware Telemetry Parameters */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
@@ -1005,49 +1256,11 @@ export default function UserDashboard() {
 
         {/* ── TAB 4: RF ANALYZER VIEW ── */}
         {activeTab === 'telemetry' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="ud-welcome-banner">
-              <div>
-                <h1 className="ud-greeting">RF Transceiver & Signal Analyzer</h1>
-                <p className="ud-sub">Diagnostic spectrum for pod {activePod.callsign} ({activePod.frequencyMHz} MHz).</p>
-              </div>
-            </div>
-
-            <div className="ud-info-card">
-              <h3 className="ud-info-title">
-                <BarChart2 size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Real-Time Signal Spectral Density
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'flex-end', height: '140px', gap: '6px', margin: '20px 0', padding: '16px', background: '#0a0f1d', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-                {[40, 65, 80, 45, 90, 75, 55, 85, 95, 60, 70, 88, 50, 68, 82, 92, 45, 78, 86, 62, 74].map((h, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      flex: 1,
-                      height: `${h}%`,
-                      background: idx % 3 === 0 ? '#00f5ff' : idx % 3 === 1 ? '#10b981' : '#ff5722',
-                      borderRadius: '3px',
-                      opacity: 0.85
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>TRANSMIT GAIN</span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00f5ff' }}>+{activePod.gainDBm || 18.5} dBm</div>
-                </div>
-                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>CIPHER SCHEME</span>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#39ff14' }}>{activePod.encryption || 'AES-256-GCM'}</div>
-                </div>
-                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>HARDWARE TIER</span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f59e0b' }}>{activePod.model || 'AEROSPEC Pro'}</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <RfAnalyzerConsole
+            activePod={activePod}
+            podHistory={podHistory}
+            streamStatus={streamStatus}
+          />
         )}
 
         {/* ── TAB 5: REPORTS VIEW ── */}
@@ -1088,7 +1301,7 @@ export default function UserDashboard() {
                       </td>
                       <td style={{ padding: '12px', textAlign: 'right' }}>
                         <button 
-                          onClick={() => alert(`Downloading telemetry package for ${r.id}...`)}
+                          onClick={() => downloadReportFile(r, activePod, podHistory)}
                           style={{ padding: '6px 12px', background: 'rgba(0, 245, 255, 0.1)', border: '1px solid #00f5ff', color: '#00f5ff', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
                         >
                           <Download size={14} /> Download
@@ -1140,6 +1353,41 @@ export default function UserDashboard() {
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {/* Operator Name Panel */}
+                <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <User size={16} color="#00f5ff" />
+                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>OPERATOR DISPLAY NAME</span>
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#ffedd6', fontWeight: 700 }}>
+                    {user.name || 'Flight Operator'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setNewNameInput(user.name || '');
+                      setNameError('');
+                      setNameModalOpen(true);
+                    }}
+                    style={{
+                      marginTop: 'auto',
+                      padding: '8px 14px',
+                      background: 'rgba(0, 245, 255, 0.1)',
+                      border: '1px solid #00f5ff',
+                      color: '#00f5ff',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <User size={14} /> Change User Name →
+                  </button>
+                </div>
+
                 {/* Email Address Panel */}
                 <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1225,8 +1473,8 @@ export default function UserDashboard() {
 
             {/* 3. Mission Telemetry Data Sheet Exporter */}
             <div className="ud-info-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ maxWidth: '600px' }}>
                   <h3 className="ud-info-title">
                     <FileSpreadsheet size={18} style={{ verticalAlign: 'middle', marginRight: '8px', color: '#00f5ff' }} /> Mission Telemetry Data Sheet Exporter
                   </h3>
@@ -1234,24 +1482,74 @@ export default function UserDashboard() {
                     Download sanitized mission specifications, telemetry logs, and orbital parameters as JSON or CSV packages.
                   </p>
                 </div>
-                <button
-                  onClick={() => setDataSheetModalOpen(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)',
-                    border: 'none',
-                    color: '#020208',
-                    padding: '10px 18px',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Download size={15} /> Download Data Sheet Package →
-                </button>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => {
+                      const payload = generateDataSheetPayload({ user, satellite: satIdentity, tenant, pods, missions, reports });
+                      const ts = new Date().toISOString().split('T')[0];
+                      downloadCsvDataSheet(payload, `AeroSpace_FleetTelemetry_${satIdentity?.callsign || 'SAT'}_${ts}.csv`);
+                      setActionMsg('Telemetry Data Sheet (CSV) downloaded successfully.');
+                    }}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.12)',
+                      border: '1px solid #38bdf8',
+                      color: '#38bdf8',
+                      padding: '9px 15px',
+                      borderRadius: '8px',
+                      fontWeight: 600,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Download size={14} /> Download CSV
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const payload = generateDataSheetPayload({ user, satellite: satIdentity, tenant, pods, missions, reports });
+                      const ts = new Date().toISOString().split('T')[0];
+                      downloadJsonDataSheet(payload, `AeroSpace_MissionData_${satIdentity?.callsign || 'SAT'}_${ts}.json`);
+                      setActionMsg('Telemetry Data Sheet (JSON) downloaded successfully.');
+                    }}
+                    style={{
+                      background: 'rgba(0, 245, 255, 0.12)',
+                      border: '1px solid #00f5ff',
+                      color: '#00f5ff',
+                      padding: '9px 15px',
+                      borderRadius: '8px',
+                      fontWeight: 600,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FileText size={14} /> Download JSON
+                  </button>
+
+                  <button
+                    onClick={() => setDataSheetModalOpen(true)}
+                    style={{
+                      background: 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)',
+                      border: 'none',
+                      color: '#020208',
+                      padding: '9px 16px',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Sliders size={14} /> Advanced Package Modal →
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1861,6 +2159,92 @@ export default function UserDashboard() {
         missions={missions}
         reports={reports}
       />
+
+      {/* ══════════════ MODAL: CHANGE USER NAME ══════════════ */}
+      {nameModalOpen && (
+        <div className="ud-modal-backdrop" onClick={() => setNameModalOpen(false)}>
+          <div className="ud-modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="ud-modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={18} color="#00f5ff" /> Change Operator Name
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNameModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px', lineHeight: 1.5 }}>
+              Update your flight operator callsign or display name. Changes will persist across your account and reflect immediately in the telemetry dashboard and navigation bar.
+            </p>
+
+            {nameError && (
+              <div style={{ padding: '10px 14px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fca5a5', borderRadius: '6px', fontSize: '13px', marginBottom: '14px' }}>
+                {nameError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveUserName}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 600 }}>
+                  NEW OPERATOR DISPLAY NAME
+                </label>
+                <input
+                  type="text"
+                  value={newNameInput}
+                  onChange={(e) => setNewNameInput(e.target.value)}
+                  placeholder="e.g. Commander Shepard"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    background: '#0d1322',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    borderRadius: '6px',
+                    color: '#ffedd6',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div className="ud-modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="ud-modal-cancel"
+                  onClick={() => setNameModalOpen(false)}
+                  disabled={nameLoading}
+                  style={{ padding: '8px 16px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94a3b8', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ud-modal-submit"
+                  disabled={nameLoading}
+                  style={{
+                    padding: '8px 18px',
+                    background: 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)',
+                    border: 'none',
+                    color: '#020208',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    cursor: nameLoading ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {nameLoading ? 'Saving...' : 'Save Name'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -26,10 +26,12 @@ export default function ContactSection() {
   const [formData, setFormData] = useState({
     callsign: '',
     email: '',
+    subject: '',
     organization: '',
     message: ''
   });
-  const [status, setStatus] = useState('idle'); // idle | transmitting | sent
+  const [status, setStatus] = useState('idle'); // idle | transmitting | sent | error
+  const [errorMsg, setErrorMsg] = useState('');
   const [receipt, setReceipt] = useState(null);
 
   const priorities = [
@@ -50,49 +52,76 @@ export default function ContactSection() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (status === 'error') {
+      setStatus('idle');
+      setErrorMsg('');
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.message) return;
+    setErrorMsg('');
+
+    if (!formData.email || !formData.email.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
+      setStatus('error');
+      return;
+    }
+
+    if (!formData.message || formData.message.trim().length < 3) {
+      setErrorMsg('Please enter a mission message (at least 3 characters).');
+      setStatus('error');
+      return;
+    }
 
     setStatus('transmitting');
     const generatedId = `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`;
 
     try {
-      await fetch(`${VITE_API_URL}/api/contact`, {
+      const res = await fetch(`${VITE_API_URL}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           callsign: formData.callsign,
+          name: formData.callsign,
           email: formData.email,
           organization: formData.organization,
+          subject: formData.subject || priority,
           priority: priority,
           band: band,
           message: formData.message,
           id: generatedId
         })
       });
-    } catch {
-      // Continue with offline/simulation receipt if backend offline
-    }
 
-    setTimeout(() => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || 'Unable to Send — Try Again');
+      }
+
       setReceipt({
-        id: generatedId,
+        id: data.data?.id || generatedId,
         timestamp: new Date().toUTCString(),
         operator: formData.callsign || 'Guest Operator',
         priority: priority,
         band: band,
         email: formData.email
       });
+
       setStatus('sent');
-    }, 1000);
+      // Clear form after successful submission
+      setFormData({ callsign: '', email: '', subject: '', organization: '', message: '' });
+    } catch (err) {
+      console.warn('Contact submission error:', err.message);
+      setStatus('error');
+      setErrorMsg(err.message || 'Unable to Send — Try Again');
+    }
   };
 
   const handleReset = () => {
-    setFormData({ callsign: '', email: '', organization: '', message: '' });
+    setFormData({ callsign: '', email: '', subject: '', organization: '', message: '' });
     setStatus('idle');
+    setErrorMsg('');
     setReceipt(null);
   };
 
@@ -391,6 +420,22 @@ export default function ContactSection() {
                     </div>
                   </div>
 
+                  {/* Subject Field */}
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subject">
+                      TRANSMISSION SUBJECT / MISSION TOPIC
+                    </label>
+                    <input
+                      id="subject"
+                      name="subject"
+                      type="text"
+                      placeholder="e.g. Telemetry API Integration / Ground Station Uplink Request"
+                      value={formData.subject}
+                      onChange={handleChange}
+                      className="form-input"
+                    />
+                  </div>
+
                   {/* Mission Message */}
                   <div className="form-group">
                     <label className="form-label" htmlFor="message">
@@ -408,16 +453,30 @@ export default function ContactSection() {
                     />
                   </div>
 
+                  {/* Error Alert Display */}
+                  {status === 'error' && errorMsg && (
+                    <div style={{ padding: '10px 14px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                      <AlertTriangle size={16} />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
+
                   {/* Submit Button */}
                   <button
                     type="submit"
                     className="dispatch-submit-btn"
                     disabled={status === 'transmitting'}
+                    style={status === 'error' ? { borderColor: '#ef4444', background: 'rgba(239, 68, 68, 0.15)' } : {}}
                   >
                     {status === 'transmitting' ? (
                       <span className="transmitting-state">
                         <Activity className="animate-spin" size={18} />
-                        <span>ESTABLISHING RF DOWNLINK...</span>
+                        <span>Sending... (Establishing RF Downlink)</span>
+                      </span>
+                    ) : status === 'error' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fca5a5' }}>
+                        <AlertTriangle size={16} />
+                        <span>Unable to Send — Try Again</span>
                       </span>
                     ) : (
                       <span className="idle-state">
@@ -429,7 +488,7 @@ export default function ContactSection() {
 
                   <div className="form-footnote">
                     <ShieldCheck size={14} className="text-emerald" />
-                    <span>256-Bit Encrypted Downlink · Non-repudiation audit logging</span>
+                    <span>256-Bit Encrypted Downlink · Target Desk: bikkinavijay0@gmail.com</span>
                   </div>
 
                 </form>

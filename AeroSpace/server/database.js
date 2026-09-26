@@ -377,6 +377,10 @@ export const db = {
     return { success: true };
   },
 
+  getActiveOtp: (email) => {
+    return otpStore.get(email.toLowerCase());
+  },
+
   // ── USERS & ACCOUNT SURVEILLANCE ──
   getUserByEmail: (email) => {
     const data = readDb();
@@ -512,6 +516,31 @@ export const db = {
   },
 
   // ── USER PROFILE & ACCOUNT MANAGEMENT ──
+  updateUserName: (email, newName) => {
+    const data = readDb();
+    const user = data.users.find(u => u.email.toLowerCase() === (email || '').toLowerCase().trim());
+    if (!user) throw new Error('Account not found.');
+
+    const cleanName = (newName || '').trim();
+    if (!cleanName) throw new Error('Name cannot be empty.');
+
+    const oldName = user.name;
+    user.name = cleanName;
+
+    data.logs.unshift({
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      type: 'ACCOUNT',
+      event: `User updated display name: "${oldName}" -> "${user.name}" (${user.email})`,
+      user: user.email,
+      severity: 'info'
+    });
+
+    writeDb(data);
+    const { password: _, ...safeUser } = user;
+    return safeUser;
+  },
+
   updateUserEmail: (currentEmail, newEmail) => {
     const data = readDb();
     const user = data.users.find(u => u.email.toLowerCase() === currentEmail.toLowerCase());

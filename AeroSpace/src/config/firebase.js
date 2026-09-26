@@ -1,39 +1,8 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  getDocs,
-  onSnapshot
-} from "firebase/firestore";
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "firebase/storage";
-
-// Your web app's Firebase configuration
+// Firebase configuration for Firebase Hosting & optional client services
 // Configured to pull from Vite environment variables (VITE_FIREBASE_*)
 // with AeroSpace project configuration defaults as fallbacks
+import { initializeApp, getApps, getApp } from "firebase/app";
+
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCTzWdB0axWCFDlXAKDHvutUmSuifPyU7k",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "aerospec-440.firebaseapp.com",
@@ -44,62 +13,15 @@ export const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-579VYE260R"
 };
 
-// Initialize Firebase App (idempotent across Vite HMR)
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Lazy initialization helpers - ensures Firebase is NOT initialized merely because a file or page is rendered
+let _app = null;
 
-// Initialize Firebase Authentication
-export const auth = getAuth(app);
-
-// Initialize Cloud Firestore Database
-export const db = getFirestore(app);
-
-// Initialize Cloud Storage
-export const storage = getStorage(app);
-
-// Initialize Firebase Analytics safely (guards against SSR & environments without IndexedDB/window)
-export let analytics = null;
-if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) {
-      analytics = getAnalytics(app);
-    }
-  }).catch((err) => {
-    console.warn("Firebase Analytics could not be initialized:", err);
-  });
-}
-
-// Configure Google Authentication Provider
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
-
-// Helper Functions for Common Operations
-export const signInWithGoogle = async () => {
-  return await signInWithPopup(auth, googleProvider);
+export const getFirebaseApp = () => {
+  if (typeof window === "undefined") return null;
+  if (!_app) {
+    _app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  }
+  return _app;
 };
 
-export const logoutFirebase = async () => {
-  return await signOut(auth);
-};
-
-export {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-  ref,
-  uploadBytes,
-  getDownloadURL
-};
-
-export default app;
+export default firebaseConfig;

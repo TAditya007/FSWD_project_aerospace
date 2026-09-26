@@ -1,10 +1,13 @@
 import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { db, PLAN_LIMITS } from './database.js';
-import { sendOTPEmail } from './mailer.js';
+import { sendOTPEmail, sendUserNotificationEmail, sendContactEmail } from './mailer.js';
+import { initTelemetryBridge } from './telemetryBridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,11 +17,33 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Wrap Express with native Node HTTP Server for Socket.io
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      'https://aerospec-440.web.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173'
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Initialize CO5 Real-time MQTT-to-Socket.io Telemetry Bridge
+const telemetryBridge = initTelemetryBridge(io);
+
 app.use(cors());
 app.use(express.json());
 
 // Request logger and URL normalizer
 app.use((req, res, next) => {
+  // Let Socket.io paths pass without URL rewriting
+  if (req.url.startsWith('/socket.io')) {
+    return next();
+  }
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   if (!req.url.startsWith('/api')) {
     req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
@@ -52,7 +77,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
   try {
     const otp = db.generateOTP(targetEmail, type || 'LOGIN');
-    
+
     // Dispatch real email via nodemailer
     const mailResult = await sendOTPEmail({
       to: targetEmail,
@@ -221,8 +246,161 @@ app.post('/api/auth/signup', (req, res) => {
 });
 
 // ════════════════════════════════════════════
-// 1.1 USER ACCOUNT MANAGEMENT (EMAIL / PASSWORD / THEME / DATASHEET)
+// 1.1 FORGOT PASSWORD (EMAIL OTP & RESET)
 // ════════════════════════════════════════════
+
+// Request Password Reset OTP (Dispatched to registered user's email via Brevo)
+app.post('/api/auth/forgot-password/request-otp', async (req, res) => {
+  const { email } = req.body;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const targetEmail = (email || '').trim().toLowerCase();
+
+  if (!targetEmail || !targetEmail.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid registered email address is required.' });
+  }
+
+  // Verify that the email belongs to an existing account before allowing reset
+  const user = db.getUserByEmail(targetEmail);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'No AeroSpec account registered with this email address.'
+    });
+  }
+
+  try {
+    const otp = db.generateOTP(targetEmail, 'PASSWORD_RESET');
+
+    // Send OTP to THAT user's email via Brevo/mailer
+    const mailResult = await sendOTPEmail({
+      to: targetEmail,
+      otp,
+      type: 'PASSWORD_RESET',
+      name: user.name || 'Flight Operator'
+    });
+
+    if (!mailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to send password reset OTP. Please try again.'
+      });
+    }
+
+    if (isProduction) {
+      return res.json({
+        success: true,
+        message: 'Password reset code sent to your registered email.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Password reset verification code dispatched to ${targetEmail}`,
+      email: targetEmail,
+      deliveryMode: mailResult.mode,
+      previewUrl: mailResult.previewUrl,
+      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Unable to send OTP email. Please try again.' });
+  }
+});
+
+// Verify OTP & Reset Password
+app.post('/api/auth/forgot-password/reset', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  const targetEmail = (email || '').trim().toLowerCase();
+
+  if (!targetEmail || !otp || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email, 6-digit OTP code, and new password are required.'
+    });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'New password must be at least 6 characters long.'
+    });
+  }
+
+  const user = db.getUserByEmail(targetEmail);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Account not found.' });
+  }
+
+  const result = db.verifyOTP(targetEmail, otp);
+  if (!result.success) {
+    return res.status(400).json({ success: false, message: result.message });
+  }
+
+  try {
+    db.updateUserPassword(targetEmail, newPassword);
+
+    // Send security notification confirmation email to THAT user's email
+    sendUserNotificationEmail({
+      to: targetEmail,
+      name: user.name,
+      subject: 'AeroSpec Security Alert: Password Reset Complete',
+      title: 'Password Reset Successful',
+      message: 'Your AeroSpec account password has been successfully reset. You may now return to the cockpit sign-in page and log in with your new password.',
+      actionDetails: {
+        'Account': targetEmail,
+        'Security Event': 'Password Reset via Verified 2FA OTP',
+        'Timestamp': new Date().toUTCString()
+      }
+    }).catch(err => console.warn('Could not send password reset notification email:', err.message));
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully! You can now sign in with your new password.'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ════════════════════════════════════════════
+// 1.2 USER ACCOUNT MANAGEMENT (NAME / EMAIL / PASSWORD / THEME / DATASHEET)
+// ════════════════════════════════════════════
+
+// Update User Display Name
+app.post('/api/user/name', async (req, res) => {
+  const { email, name } = req.body;
+  const targetEmail = (email || '').trim().toLowerCase();
+  const cleanName = (name || '').trim();
+
+  if (!targetEmail || !cleanName) {
+    return res.status(400).json({ success: false, message: 'Email and non-empty display name are required.' });
+  }
+
+  try {
+    const updatedUser = db.updateUserName(targetEmail, cleanName);
+
+    // Send confirmation email to that user
+    sendUserNotificationEmail({
+      to: targetEmail,
+      name: cleanName,
+      subject: 'AeroSpec Profile Updated: Operator Name Changed',
+      title: 'Operator Display Name Updated',
+      message: `Your operator display name in AeroSpec Mission Control was updated to "${cleanName}".`,
+      actionDetails: {
+        'New Operator Name': cleanName,
+        'Account Email': targetEmail,
+        'Timestamp': new Date().toUTCString()
+      }
+    }).catch(err => console.warn('Could not send name change notification email:', err.message));
+
+    return res.json({
+      success: true,
+      user: updatedUser,
+      message: 'Operator display name updated successfully!'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
 
 // Request OTP to change email (Dispatched to NEW email)
 app.post('/api/user/email/request-otp', async (req, res) => {
@@ -280,6 +458,21 @@ app.post('/api/user/email/verify-otp', (req, res) => {
 
   try {
     const updatedUser = db.updateUserEmail(currentEmail, newEmail);
+
+    // Send confirmation email to new email address
+    sendUserNotificationEmail({
+      to: newEmail,
+      name: updatedUser.name,
+      subject: 'AeroSpec Account Security: Email Address Updated',
+      title: 'Email Address Changed Successfully',
+      message: `Your AeroSpec account email address has been successfully transferred from ${currentEmail} to ${newEmail}.`,
+      actionDetails: {
+        'Previous Email': currentEmail,
+        'Current Email': newEmail,
+        'Timestamp': new Date().toUTCString()
+      }
+    }).catch(err => console.warn('Could not send email change confirmation:', err.message));
+
     return res.json({
       success: true,
       user: updatedUser,
@@ -350,6 +543,22 @@ app.post('/api/user/password/verify-otp', (req, res) => {
 
   try {
     db.updateUserPassword(email, newPassword);
+
+    const user = db.getUserByEmail(email);
+    // Send security notification to user
+    sendUserNotificationEmail({
+      to: email,
+      name: user?.name,
+      subject: 'AeroSpec Security Alert: Password Updated',
+      title: 'Account Password Changed',
+      message: 'Your AeroSpec account password was successfully updated via verified 2FA authentication.',
+      actionDetails: {
+        'Account Email': email,
+        'Security Event': 'Password Change via 2FA OTP',
+        'Timestamp': new Date().toUTCString()
+      }
+    }).catch(err => console.warn('Could not send password change notification:', err.message));
+
     return res.json({
       success: true,
       message: 'Account password updated successfully!'
@@ -389,13 +598,24 @@ app.get('/api/user/datasheet', (req, res) => {
 // 2. PAYMENT OTP & SUBSCRIPTION GATEWAY
 // ════════════════════════════════════════════
 
-// Request Payment Authorization OTP (Dispatched to bikkinavijay0@gmail.com)
+// Request Payment Authorization OTP (Dispatched to the purchasing user's email)
 app.post('/api/payment/send-otp', async (req, res) => {
-  const targetEmail = req.body.email || 'bikkinavijay0@gmail.com';
+  const targetEmail = (req.body.email || '').trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Validate that user email is present and properly formatted
+  if (!targetEmail || !emailRegex.test(targetEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: 'A valid user email address is required to receive payment authorization OTP.'
+    });
+  }
+
   try {
+    // Generate OTP associated with the user's email
     const otp = db.generateOTP(targetEmail, 'PAYMENT_CONFIRMATION');
-    
-    // Log OTP dispatch in DB
+
+    // Log OTP dispatch in DB for user audit
     db.logOtp({
       email: targetEmail,
       otp,
@@ -404,6 +624,7 @@ app.post('/api/payment/send-otp', async (req, res) => {
       ip: req.ip
     });
 
+    // Send payment OTP to the user's email
     const mailResult = await sendOTPEmail({
       to: targetEmail,
       otp,
@@ -420,13 +641,13 @@ app.post('/api/payment/send-otp', async (req, res) => {
       return res.json({ success: true, message: 'OTP sent successfully' });
     }
 
+    // In dev: return delivery status and previewUrl (test inbox), but NEVER expose OTP code (Requirement 10)
     return res.json({
       success: true,
       message: `Payment authorization OTP dispatched to ${targetEmail}`,
       email: targetEmail,
       deliveryMode: mailResult.mode,
-      previewUrl: mailResult.previewUrl,
-      otpPreview: mailResult.mode !== 'LIVE_SMTP' ? otp : undefined
+      previewUrl: mailResult.previewUrl
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
@@ -438,24 +659,29 @@ app.post('/api/payment/send-otp', async (req, res) => {
 
 // Verify Payment OTP
 app.post('/api/payment/verify-otp', (req, res) => {
+  const targetEmail = (req.body.email || '').trim().toLowerCase();
   const { otp } = req.body;
-  const targetEmail = req.body.email || 'bikkinavijay0@gmail.com';
 
-  if (!otp) {
+  if (!targetEmail || !targetEmail.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Valid user email address is required for OTP verification.' });
+  }
+
+  if (!otp || typeof otp !== 'string' || otp.trim().length !== 6) {
     return res.status(400).json({ success: false, message: '6-digit OTP code is required.' });
   }
 
-  const result = db.verifyOTP(targetEmail, otp);
+  const cleanOtp = otp.trim();
+  const result = db.verifyOTP(targetEmail, cleanOtp);
   db.logOtp({
     email: targetEmail,
-    otp,
+    otp: cleanOtp,
     type: 'PAYMENT_VERIFY',
     status: result.success ? 'VERIFIED' : 'FAILED',
     ip: req.ip
   });
 
   if (!result.success) {
-    return res.status(400).json({ success: false, message: result.message });
+    return res.status(400).json({ success: false, message: result.message || 'Invalid or expired OTP code.' });
   }
 
   return res.json({ success: true, message: 'OTP verified. Payment authorization confirmed.' });
@@ -498,6 +724,26 @@ app.post('/api/user/subscribe', (req, res) => {
 
   try {
     const result = db.userSubscribe(userId, planTier, billingDetails);
+
+    // Send confirmation email to current user
+    const allUsers = db.getAllUsersForAdmin();
+    const user = allUsers.find(u => u.id === userId) || db.getUserByEmail(billingDetails?.userEmail || '');
+    if (user?.email) {
+      sendUserNotificationEmail({
+        to: user.email,
+        name: user.name,
+        subject: `AeroSpec Subscription Activated: ${result.planDetails?.name}`,
+        title: 'Plan Tier Activated',
+        message: `Your account subscription has been upgraded to ${result.planDetails?.name} (${result.planDetails?.price}). Expanded fleet quota and real-time telemetry pipelines are now unlocked.`,
+        actionDetails: {
+          'Plan Tier': result.planDetails?.name,
+          'Rate': result.planDetails?.price,
+          'Order ID': result.receipt?.orderId || 'DIRECT_ACTIVATION',
+          'Timestamp': new Date().toUTCString()
+        }
+      }).catch(err => console.warn('Could not send subscription email:', err.message));
+    }
+
     return res.json({
       success: true,
       data: result,
@@ -529,6 +775,26 @@ app.post('/api/admin/payments/:id/approve', (req, res) => {
 
   try {
     const result = db.approvePayment(id, adminEmail || 'vijay@aerospec.com');
+
+    // Send confirmation email to the purchasing user's email
+    if (result?.payment?.userEmail) {
+      sendUserNotificationEmail({
+        to: result.payment.userEmail,
+        name: result.payment.userName,
+        subject: `AeroSpec Payment Approved: ${result.payment.planName}`,
+        title: 'Subscription Payment Approved',
+        message: `Your payment authorization for the ${result.payment.planName} plan (${result.payment.amount}) has been verified and approved by Ground Station Administration. Your account plan is active.`,
+        actionDetails: {
+          'Order Reference': result.payment.orderId,
+          'Plan Tier': result.payment.planName,
+          'Amount': result.payment.amount,
+          'Gateway': result.payment.gateway,
+          'Verified By': adminEmail || 'vijay@aerospec.com',
+          'Approved Date': new Date().toUTCString()
+        }
+      }).catch(err => console.warn('Could not send payment approval email:', err.message));
+    }
+
     return res.json({
       success: true,
       data: result,
@@ -770,29 +1036,76 @@ app.get('/api/user/reports', (req, res) => {
   return res.json({ success: true, data: reports });
 });
 
+// Rate limit / spam prevention store for contact submissions
+const contactRateLimit = new Map();
+
 // ════════════════════════════════════════════
 // 12. CONTACT OPERATIONS & MISSION DISPATCH
 // ════════════════════════════════════════════
-app.post('/api/contact', (req, res) => {
-  const { callsign, email, organization, priority, band, message, id } = req.body;
-  if (!email || !message) {
-    return res.status(400).json({ success: false, message: 'Email and mission message are required.' });
+app.post('/api/contact', async (req, res) => {
+  const { callsign, name, email, organization, priority, band, subject, message, id } = req.body;
+  const targetEmail = (email || '').trim().toLowerCase();
+  const operatorName = (name || callsign || 'Anonymous Operator').trim();
+  const missionMessage = (message || '').trim();
+  const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+
+  // Server-side validation
+  if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+    return res.status(400).json({ success: false, message: 'A valid email address is required.' });
   }
 
+  if (!missionMessage || missionMessage.length < 3) {
+    return res.status(400).json({ success: false, message: 'Message content must be at least 3 characters long.' });
+  }
+
+  // Prevent obvious spam / duplicate rapid submissions (10s debounce)
+  const rateLimitKey = `${clientIp}_${targetEmail}`;
+  const lastTime = contactRateLimit.get(rateLimitKey);
+  const now = Date.now();
+  if (lastTime && (now - lastTime) < 10000) {
+    return res.status(429).json({
+      success: false,
+      message: 'Transmission throttled. Please wait a few moments before sending another mission dispatch.'
+    });
+  }
+  contactRateLimit.set(rateLimitKey, now);
+
+  const dispatchId = id || `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`;
+
   const dispatch = db.createContactMessage({
-    id: id || `TX-${Math.floor(1000 + Math.random() * 9000)}-AERO`,
-    callsign: callsign || 'Anonymous Operator',
-    email,
+    id: dispatchId,
+    callsign: operatorName,
+    email: targetEmail,
     organization: organization || 'Independent',
     priority: priority || 'Routine Inquiry',
     band: band || 'S-Band',
-    message
+    message: missionMessage
   });
+
+  // Dispatch real email via Brevo HTTPS REST API to bikkinavijay0@gmail.com
+  let emailSent = false;
+  try {
+    const mailResult = await sendContactEmail({
+      name: operatorName,
+      email: targetEmail,
+      subject: subject || priority || 'Flight Operations Inquiry',
+      message: missionMessage,
+      priority: priority || 'Routine Inquiry',
+      organization: organization || 'Independent',
+      band: band || 'S-Band',
+      id: dispatchId,
+      timestamp: new Date().toUTCString()
+    });
+    emailSent = mailResult.success;
+  } catch (err) {
+    console.error('❌ [CONTACT EMAIL DISPATCH ERROR]:', err.message);
+  }
 
   return res.status(201).json({
     success: true,
     data: dispatch,
-    message: 'Mission dispatch received and logged by Ground Station Alpha.'
+    emailSent,
+    message: 'Mission dispatch received and transmitted to Ground Operations Desk (bikkinavijay0@gmail.com).'
   });
 });
 
@@ -803,12 +1116,13 @@ app.get('/api/contact', (req, res) => {
 
 import { pathToFileURL } from 'url';
 
-export { app };
+export { app, httpServer, io, telemetryBridge };
 export default app;
 
 const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if ((isDirectExecution || process.env.RENDER || process.env.PORT) && process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 AeroSpace API Backend running on http://0.0.0.0:${PORT}`);
+    console.log(`📡 Socket.io WebSocket server mounted on http://0.0.0.0:${PORT}`);
   });
 }

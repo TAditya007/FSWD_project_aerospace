@@ -11,12 +11,13 @@ import { PLAN_CONFIG as TIERS } from '../config/plans';
 import { VITE_API_URL } from '../config/api';
 
 const OFFICIAL_UPI_ID = '9866606967@superyes';
-const OFFICIAL_OTP_EMAIL = 'bikkinavijay0@gmail.com';
 
 export default function PaymentGateway() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('aerospec_user') || '{}');
+  const [userEmail, setUserEmail] = useState(user.email || '');
+  const currentUserEmail = (user.email || userEmail || '').trim().toLowerCase();
 
   const initialPlan = searchParams.get('plan') || 'cadet';
   const [selectedPlanId, setSelectedPlanId] = useState(TIERS[initialPlan] ? initialPlan : 'cadet');
@@ -36,7 +37,7 @@ export default function PaymentGateway() {
   const [cardExp, setCardExp] = useState('09/29');
   const [cardCvv, setCardCvv] = useState('491');
 
-  // ── OTP VERIFICATION STATE (bikkinavijay0@gmail.com) ──
+  // ── OTP VERIFICATION STATE ──
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
@@ -89,8 +90,13 @@ export default function PaymentGateway() {
     return await response.json();
   };
 
-  // 1. Send OTP to bikkinavijay0@gmail.com
+  // 1. Send OTP to current user email
   const handleSendOtp = async () => {
+    if (!currentUserEmail || !currentUserEmail.includes('@')) {
+      setErrorMsg('A valid user email address is required to receive your payment OTP.');
+      return;
+    }
+
     setSendingOtp(true);
     setErrorMsg('');
 
@@ -98,7 +104,7 @@ export default function PaymentGateway() {
       const res = await fetch(`${VITE_API_URL}/api/payment/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, name: user.name || 'Flight Operator' })
+        body: JSON.stringify({ email: currentUserEmail, name: user.name || 'Flight Operator' })
       });
 
       const data = await safeParseJson(res);
@@ -110,17 +116,7 @@ export default function PaymentGateway() {
       setOtpSent(true);
       setResendTimer(30);
     } catch (err) {
-      if (!import.meta.env.PROD) {
-        // Dev offline fallback
-        setOtpDeliveryInfo({
-          otpPreview: Math.floor(100000 + Math.random() * 900000).toString(),
-          deliveryMode: 'LOCAL_DEV'
-        });
-        setOtpSent(true);
-        setResendTimer(30);
-      } else {
-        setErrorMsg(err.message || 'Unable to send OTP email. Please try again.');
-      }
+      setErrorMsg(err.message === 'BACKEND_OFFLINE' ? 'Backend server unreachable. Please verify connection.' : (err.message || 'Unable to send OTP email. Please try again.'));
     } finally {
       setSendingOtp(false);
     }
@@ -129,7 +125,7 @@ export default function PaymentGateway() {
   // 2. Verify OTP before payment confirmation
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (!otpCode || otpCode.length < 6) {
+    if (!otpCode || otpCode.trim().length !== 6) {
       setErrorMsg('Please enter a valid 6-digit OTP code.');
       return;
     }
@@ -141,7 +137,7 @@ export default function PaymentGateway() {
       const res = await fetch(`${VITE_API_URL}/api/payment/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: OFFICIAL_OTP_EMAIL, otp: otpCode.trim() })
+        body: JSON.stringify({ email: currentUserEmail, otp: otpCode.trim() })
       });
 
       const data = await safeParseJson(res);
@@ -151,10 +147,6 @@ export default function PaymentGateway() {
 
       setOtpVerified(true);
     } catch (err) {
-      if (!import.meta.env.PROD && otpDeliveryInfo?.otpPreview && otpCode.trim() === otpDeliveryInfo.otpPreview) {
-        setOtpVerified(true);
-        return;
-      }
       setErrorMsg(err.message === 'BACKEND_OFFLINE' ? 'Backend server unreachable. Please verify connection.' : (err.message || 'Invalid 6-digit OTP code.'));
     } finally {
       setVerifyingOtp(false);
@@ -178,7 +170,7 @@ export default function PaymentGateway() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id || 'usr_current',
-          userEmail: user.email || OFFICIAL_OTP_EMAIL,
+          userEmail: currentUserEmail,
           userName: user.name || 'Flight Operator',
           planTier: activeTier.id,
           billingDetails: {
@@ -189,7 +181,7 @@ export default function PaymentGateway() {
             bank: selectedBank,
             cardHolder,
             last4: cardNumber.slice(-4),
-            notes: `Authorized via OTP sent to ${OFFICIAL_OTP_EMAIL}`
+            notes: `Authorized via OTP sent to ${currentUserEmail}`
           }
         })
       });
@@ -205,7 +197,7 @@ export default function PaymentGateway() {
       setReceipt({
         id: `pay_${Date.now()}`,
         orderId: `ORD_${Date.now()}`,
-        userEmail: user.email || OFFICIAL_OTP_EMAIL,
+        userEmail: currentUserEmail,
         userName: user.name || 'Flight Operator',
         planTier: activeTier.id,
         planName: activeTier.name,
@@ -413,8 +405,8 @@ export default function PaymentGateway() {
                   <span className="pg-merchant-val" style={{ color: '#00f5ff' }}>{OFFICIAL_UPI_ID}</span>
                 </div>
                 <div className="pg-merchant-row">
-                  <span className="pg-merchant-label">Authorization Email:</span>
-                  <span className="pg-merchant-val" style={{ color: '#f59e0b' }}>{OFFICIAL_OTP_EMAIL}</span>
+                  <span className="pg-merchant-label">Payer Account:</span>
+                  <span className="pg-merchant-val" style={{ color: '#00f5ff' }}>{currentUserEmail || 'Logged-in Operator'}</span>
                 </div>
               </div>
             </div>
@@ -576,7 +568,7 @@ export default function PaymentGateway() {
               )}
 
               {/* ══════════════════════════════════════════════════════════════
-                  MANDATORY OTP VERIFICATION STEP (bikkinavijay0@gmail.com)
+                  MANDATORY OTP VERIFICATION STEP (Current User Email)
                   ══════════════════════════════════════════════════════════════ */}
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,237,214,0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -597,8 +589,24 @@ export default function PaymentGateway() {
                 {!otpVerified ? (
                   <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '16px' }}>
                     <div style={{ fontSize: '12px', color: '#c9bbaa', lineHeight: 1.5, marginBottom: '12px' }}>
-                      Security policy requires a 6-digit authorization code dispatched to official email: <strong style={{ color: '#00f5ff' }}>{OFFICIAL_OTP_EMAIL}</strong> before confirming this order.
+                      Security policy requires a 6-digit authorization code dispatched to your account email: <strong style={{ color: '#00f5ff' }}>{currentUserEmail || 'your registered email'}</strong> before confirming this order.
                     </div>
+
+                    {!user.email && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#8c857b', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
+                          USER EMAIL FOR PAYMENT OTP:
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="e.g. user@example.com"
+                          className="pg-input"
+                          value={userEmail}
+                          onChange={e => setUserEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                    )}
 
                     {!otpSent ? (
                       <button
@@ -608,17 +616,24 @@ export default function PaymentGateway() {
                         className="pg-pay-btn"
                         style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff' }}
                       >
-                        {sendingOtp ? 'DISPATCHING OTP TO EMAIL...' : `Send Payment OTP to ${OFFICIAL_OTP_EMAIL} →`}
+                        {sendingOtp ? 'DISPATCHING OTP TO EMAIL...' : `Send Payment OTP to ${currentUserEmail || 'Email'} →`}
                       </button>
                     ) : (
                       <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {/* OTP Preview helper for testing */}
-                        {otpDeliveryInfo?.otpPreview && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.4)', padding: '6px 12px', borderRadius: '6px', fontSize: '12px' }}>
-                            <span style={{ color: '#8c857b' }}>OTP Code (Sent to {OFFICIAL_OTP_EMAIL}):</span>
-                            <span style={{ color: '#10b981', fontFamily: 'var(--font-mono)', fontWeight: 800, letterSpacing: '2px' }}>
-                              {otpDeliveryInfo.otpPreview}
-                            </span>
+                        <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle size={14} /> Verification code dispatched to <strong style={{ color: '#00f5ff' }}>{currentUserEmail}</strong>
+                        </div>
+
+                        {otpDeliveryInfo?.previewUrl && (
+                          <div style={{ fontSize: '11px', padding: '4px 0' }}>
+                            <a
+                              href={otpDeliveryInfo.previewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#f59e0b', textDecoration: 'underline' }}
+                            >
+                              View Dispatched Email in Test Mailbox →
+                            </a>
                           </div>
                         )}
 
@@ -653,7 +668,7 @@ export default function PaymentGateway() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8c857b' }}>
-                          <span>Check inbox & spam for {OFFICIAL_OTP_EMAIL}</span>
+                          <span>Check inbox & spam for {currentUserEmail}</span>
                           <button
                             type="button"
                             onClick={handleSendOtp}
@@ -668,7 +683,7 @@ export default function PaymentGateway() {
                   </div>
                 ) : (
                   <div style={{ padding: '12px 16px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '10px', color: '#10b981', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle size={16} /> OTP code authorized for {OFFICIAL_OTP_EMAIL}. Ready to submit for Admin Approval!
+                    <CheckCircle size={16} /> OTP code authorized for {currentUserEmail}. Ready to submit for Admin Approval!
                   </div>
                 )}
               </div>

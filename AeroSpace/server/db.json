@@ -68,7 +68,7 @@
     },
     {
       "id": "usr_2",
-      "name": "Operator Vijay",
+      "name": "Flight Operator",
       "email": "user@aerospec.com",
       "password": "user123",
       "role": "user",
@@ -322,6 +322,138 @@
       "planTier": "cadet",
       "apiKey": "aero_live_1mf7xk6hjk",
       "createdAt": "2026-09-21"
+    },
+    {
+      "id": "usr_1790277323370",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1790277323368@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_sq385fbwk1",
+      "createdAt": "2026-09-24"
+    },
+    {
+      "id": "usr_1790277323387",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1790277323384@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_rdezqb7mwm",
+      "createdAt": "2026-09-24"
+    },
+    {
+      "id": "usr_1790410616797",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1790410616796@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_c3sarcbmo5",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790410616835",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1790410616834@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_vk6seg6lo9",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790411436161",
+      "orgId": "org_apex_orbital",
+      "name": "Cadet Pilot",
+      "email": "cadet_1790411432875@orbital.org",
+      "password": "CadetPassword2026!",
+      "role": "user",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_qpf6k0e9w5",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790411457175",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1790411457174@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_fvokixwubb",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790411457187",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1790411457186@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_nzfptmc41b",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790413528378",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1790413528377@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_57tddt8aks",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790413528384",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1790413528384@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_tczdvnpbks",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790413831747",
+      "orgId": "org_apex_orbital",
+      "name": "Astronaut Chris",
+      "email": "pilot_1790413831745@spacestation.nasa.gov",
+      "password": "CosmicFlight#2026",
+      "role": "user",
+      "status": "Active",
+      "planTier": "orbital_pro",
+      "apiKey": "aero_live_pd2i2ate25",
+      "createdAt": "2026-09-26"
+    },
+    {
+      "id": "usr_1790413831754",
+      "orgId": "org_apex_orbital",
+      "name": "Commander Sarah",
+      "email": "sarah_1790413831753@aerospec.com",
+      "password": "NewUpdatedPassword2026!",
+      "role": "admin",
+      "status": "Active",
+      "planTier": "cadet",
+      "apiKey": "aero_live_43as2ly6d1",
+      "createdAt": "2026-09-26"
     }
   ],
   "telemetryPods": [
@@ -554,6 +686,51 @@
       "speedKmh": 485,
       "rssiDBm": -61,
       "batteryPct": 94
+    },
+    {
+      "id": "tlm_1790277315648",
+      "timestamp": "2026-09-24T19:15:15.648Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
+    },
+    {
+      "id": "tlm_1790411037290",
+      "timestamp": "2026-09-26T08:23:57.290Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
+    },
+    {
+      "id": "tlm_1790411457327",
+      "timestamp": "2026-09-26T08:30:57.327Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
+    },
+    {
+      "id": "tlm_1790413520166",
+      "timestamp": "2026-09-26T09:05:20.166Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
+    },
+    {
+      "id": "tlm_1790413827822",
+      "timestamp": "2026-09-26T09:10:27.822Z",
+      "podId": "pod_01",
+      "altitudeFt": 12600,
+      "speedKmh": 485,
+      "rssiDBm": -61,
+      "batteryPct": 94
     }
   ],
   "missions": [
@@ -683,6 +860,76 @@
       "leadOperator": "Operator Vijay",
       "launchWindow": "2026-09-22T17:54:25.695Z",
       "progressPct": 45
+    },
+    {
+      "id": "mis_1790277315653",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-10",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-25T19:15:15.653Z",
+      "progressPct": 45
+    },
+    {
+      "id": "mis_1790411037295",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-11",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-27T08:23:57.295Z",
+      "progressPct": 45
+    },
+    {
+      "id": "mis_1790411457331",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-12",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-27T08:30:57.331Z",
+      "progressPct": 45
+    },
+    {
+      "id": "mis_1790413520169",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-13",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-27T09:05:20.169Z",
+      "progressPct": 45
+    },
+    {
+      "id": "mis_1790413827825",
+      "orgId": "org_apex_orbital",
+      "code": "MISSION-OP-14",
+      "title": "Automated Test Flight",
+      "targetOrbit": "LEO 400 km",
+      "status": "ACTIVE_FLIGHT",
+      "assignedPods": [
+        "pod_01"
+      ],
+      "leadOperator": "Operator Vijay",
+      "launchWindow": "2026-09-27T09:10:27.825Z",
+      "progressPct": 45
     }
   ],
   "reports": [
@@ -724,6 +971,582 @@
     }
   ],
   "logs": [
+    {
+      "id": "log_1790413841100",
+      "timestamp": "2026-09-26 09:10:41",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Flight Operator\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413841097",
+      "timestamp": "2026-09-26 09:10:41",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Flight Operator\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413841094",
+      "timestamp": "2026-09-26 09:10:41",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413841092",
+      "timestamp": "2026-09-26 09:10:41",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413841089",
+      "timestamp": "2026-09-26 09:10:41",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413837187",
+      "timestamp": "2026-09-26 09:10:37",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413837183",
+      "timestamp": "2026-09-26 09:10:37",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413837181",
+      "timestamp": "2026-09-26 09:10:37",
+      "type": "ACCOUNT",
+      "event": "User updated email address: temp_op_1790413837177@aerospec.com -> user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413837178",
+      "timestamp": "2026-09-26 09:10:37",
+      "type": "ACCOUNT",
+      "event": "User updated email address: user@aerospec.com -> temp_op_1790413837177@aerospec.com",
+      "user": "temp_op_1790413837177@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413831758",
+      "timestamp": "2026-09-26 09:10:31",
+      "type": "PAYMENT",
+      "event": "Payment verified: pilot_1790413831745@spacestation.nasa.gov upgraded to Orbital Pro (₹440/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 404524882330]",
+      "user": "pilot_1790413831745@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790413831756",
+      "timestamp": "2026-09-26 09:10:31",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1790413831753@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790413831754",
+      "timestamp": "2026-09-26 09:10:31",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1790413831753@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790413831751",
+      "timestamp": "2026-09-26 09:10:31",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1790413831745@spacestation.nasa.gov",
+      "user": "pilot_1790413831745@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413831748",
+      "timestamp": "2026-09-26 09:10:31",
+      "type": "AUTH",
+      "event": "User registered: pilot_1790413831745@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1790413831745@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413809469",
+      "timestamp": "2026-09-26 09:10:09",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Flight Operator\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413762853",
+      "timestamp": "2026-09-26 09:09:22",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413762850",
+      "timestamp": "2026-09-26 09:09:22",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413762847",
+      "timestamp": "2026-09-26 09:09:22",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413762844",
+      "timestamp": "2026-09-26 09:09:22",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413762841",
+      "timestamp": "2026-09-26 09:09:22",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413740085",
+      "timestamp": "2026-09-26 09:09:00",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413740082",
+      "timestamp": "2026-09-26 09:09:00",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Commander Phoenix Zero\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413740079",
+      "timestamp": "2026-09-26 09:09:00",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413740076",
+      "timestamp": "2026-09-26 09:09:00",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413740074",
+      "timestamp": "2026-09-26 09:09:00",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413707370",
+      "timestamp": "2026-09-26 09:08:27",
+      "type": "ACCOUNT",
+      "event": "User updated display name: \"Operator Vijay\" -> \"Commander Phoenix Zero\" (user@aerospec.com)",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413707367",
+      "timestamp": "2026-09-26 09:08:27",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413707365",
+      "timestamp": "2026-09-26 09:08:27",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413707362",
+      "timestamp": "2026-09-26 09:08:27",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413541712",
+      "timestamp": "2026-09-26 09:05:41",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413541709",
+      "timestamp": "2026-09-26 09:05:41",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413541708",
+      "timestamp": "2026-09-26 09:05:41",
+      "type": "ACCOUNT",
+      "event": "User updated email address: temp_op_1790413541704@aerospec.com -> user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413541705",
+      "timestamp": "2026-09-26 09:05:41",
+      "type": "ACCOUNT",
+      "event": "User updated email address: user@aerospec.com -> temp_op_1790413541704@aerospec.com",
+      "user": "temp_op_1790413541704@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413528389",
+      "timestamp": "2026-09-26 09:05:28",
+      "type": "PAYMENT",
+      "event": "Payment verified: pilot_1790413528377@spacestation.nasa.gov upgraded to Orbital Pro (₹440/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 476398240000]",
+      "user": "pilot_1790413528377@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790413528387",
+      "timestamp": "2026-09-26 09:05:28",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1790413528384@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790413528384",
+      "timestamp": "2026-09-26 09:05:28",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1790413528384@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790413528382",
+      "timestamp": "2026-09-26 09:05:28",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1790413528377@spacestation.nasa.gov",
+      "user": "pilot_1790413528377@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790413528379",
+      "timestamp": "2026-09-26 09:05:28",
+      "type": "AUTH",
+      "event": "User registered: pilot_1790413528377@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1790413528377@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457485",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457477",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457472",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "ACCOUNT",
+      "event": "User updated email address: temp_op_1790411457463@aerospec.com -> user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457466",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "ACCOUNT",
+      "event": "User updated email address: user@aerospec.com -> temp_op_1790411457463@aerospec.com",
+      "user": "temp_op_1790411457463@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457194",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "PAYMENT",
+      "event": "Payment verified: pilot_1790411457174@spacestation.nasa.gov upgraded to Orbital Pro (₹440/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 849108542131]",
+      "user": "pilot_1790411457174@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790411457189",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1790411457186@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790411457187",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1790411457186@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790411457182",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1790411457174@spacestation.nasa.gov",
+      "user": "pilot_1790411457174@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411457176",
+      "timestamp": "2026-09-26 08:30:57",
+      "type": "AUTH",
+      "event": "User registered: pilot_1790411457174@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1790411457174@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411436200",
+      "timestamp": "2026-09-26 08:30:36",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@example.com",
+      "user": "user@example.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411436161",
+      "timestamp": "2026-09-26 08:30:36",
+      "type": "AUTH",
+      "event": "User registered: cadet_1790411432875@orbital.org (Role: user)",
+      "user": "cadet_1790411432875@orbital.org",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411432897",
+      "timestamp": "2026-09-26 08:30:32",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to cadet_1790411432875@orbital.org",
+      "user": "cadet_1790411432875@orbital.org",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411429486",
+      "timestamp": "2026-09-26 08:30:29",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411429471",
+      "timestamp": "2026-09-26 08:30:29",
+      "type": "AUTH",
+      "event": "User authenticated (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790411348437",
+      "timestamp": "2026-09-26 08:29:08",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411348419",
+      "timestamp": "2026-09-26 08:29:08",
+      "type": "AUTH",
+      "event": "User authenticated (USER)",
+      "user": "user@aerospec.com",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790411037568",
+      "timestamp": "2026-09-26 08:23:57",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411037565",
+      "timestamp": "2026-09-26 08:23:57",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411037558",
+      "timestamp": "2026-09-26 08:23:57",
+      "type": "ACCOUNT",
+      "event": "User updated email address: temp_op_1790411037550@aerospec.com -> user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790411037553",
+      "timestamp": "2026-09-26 08:23:57",
+      "type": "ACCOUNT",
+      "event": "User updated email address: user@aerospec.com -> temp_op_1790411037550@aerospec.com",
+      "user": "temp_op_1790411037550@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790410616841",
+      "timestamp": "2026-09-26 08:16:56",
+      "type": "PAYMENT",
+      "event": "Payment verified: pilot_1790410616796@spacestation.nasa.gov upgraded to Orbital Pro (₹440/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 443441797476]",
+      "user": "pilot_1790410616796@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790410616838",
+      "timestamp": "2026-09-26 08:16:56",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1790410616834@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790410616835",
+      "timestamp": "2026-09-26 08:16:56",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1790410616834@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790410616831",
+      "timestamp": "2026-09-26 08:16:56",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1790410616796@spacestation.nasa.gov",
+      "user": "pilot_1790410616796@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790410616798",
+      "timestamp": "2026-09-26 08:16:56",
+      "type": "AUTH",
+      "event": "User registered: pilot_1790410616796@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1790410616796@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277374047",
+      "timestamp": "2026-09-24 19:16:14",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277374044",
+      "timestamp": "2026-09-24 19:16:14",
+      "type": "SECURITY",
+      "event": "Password updated for operator account: user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277374041",
+      "timestamp": "2026-09-24 19:16:14",
+      "type": "ACCOUNT",
+      "event": "User updated email address: temp_op_1790277374035@aerospec.com -> user@aerospec.com",
+      "user": "user@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277374037",
+      "timestamp": "2026-09-24 19:16:14",
+      "type": "ACCOUNT",
+      "event": "User updated email address: user@aerospec.com -> temp_op_1790277374035@aerospec.com",
+      "user": "temp_op_1790277374035@aerospec.com",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277323395",
+      "timestamp": "2026-09-24 19:15:23",
+      "type": "PAYMENT",
+      "event": "Payment verified: pilot_1790277323368@spacestation.nasa.gov upgraded to Orbital Pro (₹440/mo) via UPI_SCAN [UPI: 9866606967@superyes, UTR: 835252126951]",
+      "user": "pilot_1790277323368@spacestation.nasa.gov",
+      "severity": "success"
+    },
+    {
+      "id": "log_1790277323392",
+      "timestamp": "2026-09-24 19:15:23",
+      "type": "ADMIN",
+      "event": "Admin modified account credentials for sarah_1790277323384@aerospec.com",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790277323387",
+      "timestamp": "2026-09-24 19:15:23",
+      "type": "ADMIN",
+      "event": "Admin provisioned user account: sarah_1790277323384@aerospec.com (user)",
+      "user": "ADMIN",
+      "severity": "warning"
+    },
+    {
+      "id": "log_1790277323378",
+      "timestamp": "2026-09-24 19:15:23",
+      "type": "AUTH",
+      "event": "2FA OTP email dispatched to pilot_1790277323368@spacestation.nasa.gov",
+      "user": "pilot_1790277323368@spacestation.nasa.gov",
+      "severity": "info"
+    },
+    {
+      "id": "log_1790277323371",
+      "timestamp": "2026-09-24 19:15:23",
+      "type": "AUTH",
+      "event": "User registered: pilot_1790277323368@spacestation.nasa.gov (Role: user)",
+      "user": "pilot_1790277323368@spacestation.nasa.gov",
+      "severity": "info"
+    },
     {
       "id": "log_1790241536759",
       "timestamp": "2026-09-24 09:18:56",
@@ -2061,6 +2884,24 @@
   },
   "payments": [
     {
+      "id": "pay_1790411439978_4270",
+      "orderId": "ORD_1790411439978",
+      "userId": "usr_test_123",
+      "userEmail": "user@example.com",
+      "userName": "Example Customer",
+      "planTier": "orbital_pro",
+      "planName": "Orbital Pro",
+      "amount": "₹440/mo",
+      "gateway": "UPI_QR",
+      "paymentId": "9866606967@superyes",
+      "utr": "UTR491029482019",
+      "status": "Pending Approval",
+      "createdAt": "2026-09-26 08:30:39",
+      "approvedAt": null,
+      "approvedBy": null,
+      "notes": "Authorized via OTP sent to user@example.com"
+    },
+    {
       "id": "pay_1789917956687_9899",
       "orderId": "ORD_1789917956687",
       "userId": "usr_2",
@@ -2141,6 +2982,42 @@
     }
   ],
   "otp_logs": [
+    {
+      "id": "otplog_1790411439967",
+      "email": "user@example.com",
+      "otp": "976295",
+      "type": "PAYMENT_VERIFY",
+      "status": "VERIFIED",
+      "ip": "::ffff:127.0.0.1",
+      "timestamp": "2026-09-26 08:30:39"
+    },
+    {
+      "id": "otplog_1790411439952",
+      "email": "user@example.com",
+      "otp": "111111",
+      "type": "PAYMENT_VERIFY",
+      "status": "FAILED",
+      "ip": "::ffff:127.0.0.1",
+      "timestamp": "2026-09-26 08:30:39"
+    },
+    {
+      "id": "otplog_1790411439942",
+      "email": "bikkinavijay0@gmail.com",
+      "otp": "976295",
+      "type": "PAYMENT_VERIFY",
+      "status": "FAILED",
+      "ip": "::ffff:127.0.0.1",
+      "timestamp": "2026-09-26 08:30:39"
+    },
+    {
+      "id": "otplog_1790411436205",
+      "email": "user@example.com",
+      "otp": "976295",
+      "type": "PAYMENT_CONFIRMATION",
+      "status": "DISPATCHED",
+      "ip": "::ffff:127.0.0.1",
+      "timestamp": "2026-09-26 08:30:36"
+    },
     {
       "id": "otplog_1789917954661",
       "email": "bikkinavijay0@gmail.com",
