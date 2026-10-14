@@ -5,7 +5,7 @@ import {
   FileText, Download, BarChart2, RefreshCw, CheckCircle, Sliders, MapPin,
   Gauge, Plus, Rocket, Shield, ShieldCheck, AlertTriangle, CreditCard, Check,
   QrCode, Smartphone, Building2, Wallet, Copy, Receipt, ExternalLink, Sparkles,
-  Lock, Key, Mail, Globe, Palette, FileSpreadsheet
+  Lock, Key, Mail, Globe, Palette, FileSpreadsheet, Database
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import './UserDashboard.css';
@@ -143,6 +143,16 @@ export default function UserDashboard() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Telemetry View Mode: 'live' | '24h'
+  const [telemetryViewMode, setTelemetryViewMode] = useState('live');
+  const [history24hData, setHistory24hData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySource, setHistorySource] = useState(null); // 'postgresql' | 'runtime_fallback' | 'postgresql_empty'
+  const [historyError, setHistoryError] = useState(null);
+  const [dbStatus, setDbStatus] = useState(null);
+  const historyAbortRef = useRef(null);
+  const lastFetchedPodRef = useRef(null);
+
   // CO5 Real-time WebSocket / MQTT Connection Status
   // 'connected' | 'reconnecting' | 'disconnected'
   const [streamStatus, setStreamStatus] = useState('disconnected');
@@ -187,13 +197,17 @@ export default function UserDashboard() {
 
   useEffect(() => {
     fetchSaaSData();
+    fetchDbStatus();
   }, []);
 
   useEffect(() => {
     if (selectedPodId) {
       fetchPodHistory(selectedPodId);
+      if (telemetryViewMode === '24h') {
+        fetch24hHistory(selectedPodId);
+      }
     }
-  }, [selectedPodId]);
+  }, [selectedPodId, telemetryViewMode]);
 
   // CO5 Real-time Telemetry Pipeline: Socket.io Client (MQTT-to-WebSocket bridge)
   useEffect(() => {
@@ -415,6 +429,68 @@ export default function UserDashboard() {
         { id: '4', time: '17:35', altitudeFt: 12200, speedKmh: 480, rssiDBm: -63 },
         { id: '5', time: '17:40', altitudeFt: 12450, speedKmh: 480, rssiDBm: -62 }
       ]);
+    }
+  };
+
+  const fetchDbStatus = async () => {
+    try {
+      const res = await fetch(`${VITE_API_URL}/api/telemetry/db-status`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.status) {
+          setDbStatus(data.status);
+        }
+      }
+    } catch {
+      // safe fallback
+    }
+  };
+
+  const fetch24hHistory = async (podId, force = false) => {
+    const targetPod = podId || selectedPodId || 'pod_01';
+
+    // Prevent duplicate in-flight requests for the same pod unless force=true
+    if (historyLoading && lastFetchedPodRef.current === targetPod && !force) {
+      return;
+    }
+
+    if (historyAbortRef.current) {
+      historyAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    historyAbortRef.current = controller;
+    lastFetchedPodRef.current = targetPod;
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const res = await fetch(
+        `${VITE_API_URL}/api/telemetry/history?podId=${encodeURIComponent(targetPod)}&range=24h`,
+        { signal: controller.signal }
+      );
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: Unable to load 24h telemetry`);
+      }
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setHistory24hData(data.data);
+        setHistorySource(data.source || 'postgresql');
+      } else {
+        throw new Error(data.error || 'Invalid history response payload');
+      }
+      if (data.dbStatus) {
+        setDbStatus(data.dbStatus);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('Could not fetch 24h history:', err.message);
+      setHistoryError(err.message || 'History unavailable');
+      setHistorySource(null);
+    } finally {
+      if (historyAbortRef.current === controller) {
+        setHistoryLoading(false);
+      }
     }
   };
 
@@ -940,13 +1016,45 @@ export default function UserDashboard() {
 
             {/* Live Telemetry Trajectory Chart (SVG) */}
             {(() => {
-              const chartPoints = podHistory && podHistory.length >= 2 ? podHistory : [
-                { time: '17:20', altitudeFt: 10200, rssiDBm: -68 },
-                { time: '17:25', altitudeFt: 11100, rssiDBm: -65 },
-                { time: '17:30', altitudeFt: 11800, rssiDBm: -64 },
-                { time: '17:35', altitudeFt: 12200, rssiDBm: -63 },
-                { time: '17:40', altitudeFt: 12450, rssiDBm: -62 }
-              ];
+              const formatTelemetryPointTime = (point) => {
+                if (!point) return '--:--:--';
+                const raw = point.recorded_at || point.recordedAt || point.timestamp;
+                if (raw) {
+                  const d = new Date(raw);
+                  if (!isNaN(d.getTime())) {
+                    return d.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false
+                    });
+                  }
+                }
+                return point.time || '--:--:--';
+              };
+
+              const activeSourceData = telemetryViewMode === '24h'
+                ? history24hData
+                : podHistory;
+
+              // Ensure points are sorted chronologically
+              const rawPoints = (activeSourceData && activeSourceData.length >= 2)
+                ? [...activeSourceData].sort((a, b) => {
+                    const tA = new Date(a.recorded_at || a.recordedAt || a.timestamp || 0).getTime();
+                    const tB = new Date(b.recorded_at || b.recordedAt || b.timestamp || 0).getTime();
+                    return tA - tB;
+                  })
+                : (activeSourceData && activeSourceData.length === 1)
+                ? activeSourceData
+                : [
+                    { time: '17:20', altitudeFt: 10200, rssiDBm: -68 },
+                    { time: '17:25', altitudeFt: 11100, rssiDBm: -65 },
+                    { time: '17:30', altitudeFt: 11800, rssiDBm: -64 },
+                    { time: '17:35', altitudeFt: 12200, rssiDBm: -63 },
+                    { time: '17:40', altitudeFt: 12450, rssiDBm: -62 }
+                  ];
+
+              const chartPoints = rawPoints;
 
               const minAlt = Math.min(...chartPoints.map(p => Number(p.altitudeFt) || 12000)) - 100;
               const maxAlt = Math.max(...chartPoints.map(p => Number(p.altitudeFt) || 13000)) + 100;
@@ -962,42 +1070,224 @@ export default function UserDashboard() {
                 const yAlt = Math.round(165 - altNorm * 125);
                 const rssiNorm = ((Number(pt.rssiDBm) || -62) - minRssi) / rssiRange;
                 const yRssi = Math.round(165 - rssiNorm * 115);
-                return { x, yAlt, yRssi, time: pt.time };
+                const timeStr = formatTelemetryPointTime(pt);
+                return { x, yAlt, yRssi, time: timeStr };
               });
 
               const polylineAlt = svgCoords.map(c => `${c.x},${c.yAlt}`).join(' ');
               const polygonAlt = `${svgCoords[0].x},180 ${polylineAlt} ${svgCoords[svgCoords.length - 1].x},180`;
               const polylineRssi = svgCoords.map(c => `${c.x},${c.yRssi}`).join(' ');
 
+              const isPostgresSource = historySource === 'postgresql';
+              const pointCount = activeSourceData ? activeSourceData.length : 0;
+
               return (
                 <div className="ud-chart-panel">
                   <div className="ud-chart-header">
-                    <h3 className="ud-chart-title">
-                      <Activity size={18} color="#00f5ff" />
-                      Live Telemetry Trajectory — {activePod.callsign}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontFamily: 'var(--font-mono)',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        background: streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.12)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                        color: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444',
-                        border: `1px solid ${streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.3)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                        fontWeight: '600',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}>
+                    <div>
+                      <h3 className="ud-chart-title">
+                        <Activity size={18} color="#00f5ff" />
+                        {telemetryViewMode === 'live' ? 'Live Telemetry Trajectory' : '24-Hour Telemetry History'} — {activePod.callsign || selectedPodId}
+                      </h3>
+                      <div style={{ fontSize: '11px', color: '#8c857b', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                        Source:{' '}
+                        {telemetryViewMode === 'live'
+                          ? 'Real-time WebSocket / MQTT Bridge stream'
+                          : isPostgresSource
+                          ? `Local PostgreSQL 18 Archive (${pointCount} records)`
+                          : `Runtime Telemetry Cache (${pointCount} records)`}
+                        {telemetryViewMode === '24h' && isPostgresSource && (
+                          <span style={{ marginLeft: '8px', color: '#10b981' }}>• 24H SQL QUERY VERIFIED</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      {/* View Switcher: LIVE STREAM vs LAST 24 HOURS */}
+                      <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.4)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <button
+                          id="btn-telemetry-live"
+                          onClick={() => setTelemetryViewMode('live')}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: telemetryViewMode === 'live' ? '1px solid #00f5ff' : 'none',
+                            background: telemetryViewMode === 'live' ? 'rgba(0, 245, 255, 0.15)' : 'transparent',
+                            color: telemetryViewMode === 'live' ? '#00f5ff' : '#8c857b',
+                            fontSize: '11px',
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                        >
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00f5ff', boxShadow: telemetryViewMode === 'live' ? '0 0 6px #00f5ff' : 'none' }} />
+                          LIVE STREAM
+                        </button>
+                        <button
+                          id="btn-telemetry-24h"
+                          onClick={() => {
+                            setTelemetryViewMode('24h');
+                            if (history24hData.length === 0 || lastFetchedPodRef.current !== selectedPodId) {
+                              fetch24hHistory(selectedPodId);
+                            }
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: telemetryViewMode === '24h' ? '1px solid #39ff14' : 'none',
+                            background: telemetryViewMode === '24h' ? 'rgba(57, 255, 20, 0.15)' : 'transparent',
+                            color: telemetryViewMode === '24h' ? '#39ff14' : '#8c857b',
+                            fontSize: '11px',
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                        >
+                          <Database size={11} color={telemetryViewMode === '24h' ? '#39ff14' : '#8c857b'} />
+                          LAST 24 HOURS
+                        </button>
+                      </div>
+
+                      {/* Status and Action Buttons */}
+                      {telemetryViewMode === '24h' ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          {historyLoading ? (
+                            <span style={{
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono)',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(0, 245, 255, 0.12)',
+                              color: '#00f5ff',
+                              border: '1px solid rgba(0, 245, 255, 0.3)',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}>
+                              <RefreshCw size={11} className="spin" />
+                              LOADING HISTORY...
+                            </span>
+                          ) : historyError ? (
+                            <span style={{
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono)',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <AlertTriangle size={11} />
+                              HISTORY UNAVAILABLE
+                              <button
+                                onClick={() => fetch24hHistory(selectedPodId, true)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#00f5ff',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  textDecoration: 'underline',
+                                  padding: 0
+                                }}
+                              >
+                                Retry
+                              </button>
+                            </span>
+                          ) : isPostgresSource ? (
+                            <span style={{
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono)',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(16, 185, 129, 0.12)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+                              POSTGRESQL HISTORY
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono)',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(245, 158, 11, 0.12)',
+                              color: '#f59e0b',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
+                              {historySource === 'postgresql_empty' ? 'NO PG RECORDS (EMPTY)' : 'RUNTIME FALLBACK (OFFLINE)'}
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => fetch24hHistory(selectedPodId, true)}
+                            disabled={historyLoading}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              color: '#ffedd6',
+                              fontSize: '11px',
+                              fontFamily: 'var(--font-mono)',
+                              cursor: historyLoading ? 'not-allowed' : 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              opacity: historyLoading ? 0.6 : 1
+                            }}
+                            title="Refresh 24-Hour Telemetry from PostgreSQL"
+                          >
+                            <RefreshCw size={11} className={historyLoading ? 'spin' : ''} />
+                            Refresh
+                          </button>
+                        </div>
+                      ) : (
                         <span style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          background: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444'
-                        }} />
-                        {streamStatus === 'connected' ? 'STREAMING • MQTT / WEBSOCKET' : `STREAM: ${streamStatus.toUpperCase()}`}
-                      </span>
+                          fontSize: '11px',
+                          fontFamily: 'var(--font-mono)',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          background: streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.12)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          color: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444',
+                          border: `1px solid ${streamStatus === 'connected' ? 'rgba(0, 245, 255, 0.3)' : streamStatus === 'reconnecting' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                          fontWeight: '600',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}>
+                          <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: streamStatus === 'connected' ? '#00f5ff' : streamStatus === 'reconnecting' ? '#f59e0b' : '#ef4444'
+                          }} />
+                          {streamStatus === 'connected' ? 'STREAMING • MQTT / WEBSOCKET' : `STREAM: ${streamStatus.toUpperCase()}`}
+                        </span>
+                      )}
+
                       <div className="ud-chart-legend">
                         <div className="ud-legend-item">
                           <span className="ud-legend-dot" style={{ background: '#00f5ff' }} />
@@ -1052,12 +1342,17 @@ export default function UserDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8c857b' }}>
                     {svgCoords.length <= 6
                       ? svgCoords.map((c, i) => (
-                          <span key={i}>{c.time} {i === svgCoords.length - 1 ? '(LIVE)' : ''}</span>
+                          <span key={i}>
+                            {c.time} {i === svgCoords.length - 1 ? (telemetryViewMode === 'live' ? '(LIVE)' : '(LATEST)') : ''}
+                          </span>
                         ))
                       : [0, Math.floor(svgCoords.length * 0.25), Math.floor(svgCoords.length * 0.5), Math.floor(svgCoords.length * 0.75), svgCoords.length - 1].map((idx, i) => (
-                          <span key={i}>{svgCoords[idx]?.time} {idx === svgCoords.length - 1 ? '(LIVE)' : ''}</span>
+                          <span key={i}>
+                            {svgCoords[idx]?.time} {idx === svgCoords.length - 1 ? (telemetryViewMode === 'live' ? '(LIVE)' : '(LATEST)') : ''}
+                          </span>
                         ))}
                   </div>
+
                 </div>
               );
             })()}

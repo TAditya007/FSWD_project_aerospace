@@ -7,6 +7,7 @@
 // ══════════════════════════════════════════════════════════════════════════
 
 import mqtt from 'mqtt';
+import { insertTelemetryReading } from './pgClient.js';
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://broker.hivemq.com:1883';
 const MQTT_TOPIC_SUB = 'aerospec/telemetry/+';
@@ -181,6 +182,11 @@ export function initTelemetryBridge(io) {
 
         // Emit through Socket.io to all connected frontend clients
         io.emit('telemetry:stream', latestTelemetry);
+
+        // Persist telemetry packet to local PostgreSQL table public.telemetry_readings
+        insertTelemetryReading(payload).catch((dbErr) => {
+          console.warn('[CO5 Telemetry Bridge] PostgreSQL insert warning:', dbErr.message);
+        });
       } catch (parseErr) {
         console.error('[CO5 Telemetry Bridge] Failed to parse MQTT message payload:', parseErr.message);
       }
@@ -212,8 +218,14 @@ export function initTelemetryBridge(io) {
         offlineFallback: true
       };
       io.emit('telemetry:stream', latestTelemetry);
+
+      // Persist to local PostgreSQL table when running in offline/local simulator mode
+      insertTelemetryReading(frame).catch((dbErr) => {
+        console.warn('[CO5 Telemetry Bridge] Offline PostgreSQL insert warning:', dbErr.message);
+      });
     }
   }, 1000);
+
 
   // ── Socket.io Connection Management ──
   io.on('connection', (socket) => {

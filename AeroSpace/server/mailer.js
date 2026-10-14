@@ -20,6 +20,16 @@ let etherealAccount = null;
 // Initialize Transporter
 async function getTransporter() {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isTest = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
+
+  // In test or CI environments, always use safe JSON mock transport
+  if (isTest) {
+    const jsonTransporter = nodemailer.createTransport({
+      jsonTransport: true
+    });
+    return { transport: jsonTransporter, mode: 'TEST_MOCK', sender: DEFAULT_SENDER };
+  }
+
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const user = process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL;
   const pass = process.env.SMTP_PASS;
@@ -544,6 +554,17 @@ export async function sendOTPEmail({ to, otp, type = 'LOGIN', name = 'Operator' 
   const html = buildOtpEmailHtml({ email: recipient, otp, type, name });
   const text = `AeroSpace 2FA Security Code: ${otp}. Valid for 10 minutes. Sent from ${process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || OFFICIAL_SENDER_EMAIL}. If you did not request this, please ignore.`;
 
+  // ── TEST ENVIRONMENT SAFETY: Never dispatch real emails in test/CI ──
+  if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
+    return {
+      success: true,
+      sender: DEFAULT_SENDER,
+      mode: 'TEST_MOCK',
+      messageId: `mock-msg-${Date.now()}`,
+      recipient
+    };
+  }
+
   // ── PRIORITY 1: Brevo REST API over HTTPS (Port 443) ──
   // Recommended for Render Free Web Services where outbound SMTP (ports 25, 465, 587) is blocked
   if (process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim() !== '') {
@@ -681,6 +702,17 @@ export async function sendUserNotificationEmail({ to, subject, title, message, a
   const html = buildUserNotificationEmailHtml({ name, title, message, actionDetails });
   const text = `AeroSpec Ground Control Notification: ${title}. ${message} Sent to ${recipient}. If you did not authorize this, alert system administration immediately.`;
 
+  // ── TEST ENVIRONMENT SAFETY: Never dispatch real emails in test/CI ──
+  if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
+    return {
+      success: true,
+      sender: DEFAULT_SENDER,
+      mode: 'TEST_MOCK',
+      messageId: `mock-msg-${Date.now()}`,
+      recipient
+    };
+  }
+
   // 1. Brevo REST API over HTTPS (Port 443)
   if (process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim() !== '') {
     try {
@@ -782,6 +814,17 @@ export async function sendContactEmail({ name, email, subject, message, priority
     timestamp: timestamp || new Date().toUTCString()
   });
   const text = `AeroSpec Flight Operations Inbound Inquiry\nID: ${id || 'TX-AERO'}\nFrom: ${operatorName} (${operatorEmail})\nOrg: ${organization || 'N/A'}\nPriority: ${priority || 'Routine'}\nBand: ${band || 'S-Band'}\nMessage:\n${message}\n\n(Reply-To: ${operatorEmail})`;
+
+  // ── TEST ENVIRONMENT SAFETY: Never dispatch real emails in test/CI ──
+  if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
+    return {
+      success: true,
+      sender: DEFAULT_SENDER,
+      mode: 'TEST_MOCK',
+      messageId: `mock-msg-${Date.now()}`,
+      recipient: adminRecipient
+    };
+  }
 
   const replyTo = { email: operatorEmail, name: operatorName };
 

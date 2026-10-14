@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { db, PLAN_LIMITS } from './database.js';
 import { sendOTPEmail, sendUserNotificationEmail, sendContactEmail } from './mailer.js';
 import { initTelemetryBridge } from './telemetryBridge.js';
+import { getTelemetryHistory, getDbStatus, testConnection } from './pgClient.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1036,6 +1037,76 @@ app.get('/api/user/reports', (req, res) => {
   return res.json({ success: true, data: reports });
 });
 
+// ════════════════════════════════════════════
+// 11. LOCAL POSTGRESQL TELEMETRY ARCHIVE
+// ════════════════════════════════════════════
+
+// Database Connection Status Endpoint
+app.get('/api/telemetry/db-status', (req, res) => {
+  const status = getDbStatus();
+  return res.json({ success: true, status });
+});
+
+// Database-Backed 24-Hour Telemetry History Endpoint
+// GET /api/telemetry/history?podId=pod_01&range=24h
+app.get('/api/telemetry/history', async (req, res) => {
+  const rawPodParam = (req.query.podId || 'pod_01').toString().trim();
+  const range = (req.query.range || '24h').toString().trim();
+
+  // Resolve pod identity dynamically: support pod ID ('pod_01') or callsign ('AERO-POD-09')
+  const allPods = db.getAllPods();
+  const matchedPod = allPods.find(
+    p => p.id?.toLowerCase() === rawPodParam.toLowerCase() ||
+         p.callsign?.toLowerCase() === rawPodParam.toLowerCase()
+  );
+  const targetPodId = matchedPod?.id || rawPodParam;
+  const targetCallsign = matchedPod?.callsign || (rawPodParam !== targetPodId ? rawPodParam : null);
+
+  try {
+    const pgResult = await getTelemetryHistory(targetPodId, range, targetCallsign);
+
+    // If PostgreSQL query succeeded and returned rows, return them directly
+    if (pgResult.success && pgResult.data && pgResult.data.length > 0) {
+      return res.json({
+        success: true,
+        source: 'postgresql',
+        podId: targetPodId,
+        callsign: targetCallsign,
+        range,
+        count: pgResult.data.length,
+        data: pgResult.data
+      });
+    }
+
+    // If PostgreSQL is unconfigured or returned empty, provide seamless fallback
+    const fallbackReadings = db.getPodReadings(targetPodId);
+    return res.json({
+      success: true,
+      source: pgResult.success ? 'postgresql_empty' : 'runtime_fallback',
+      podId: targetPodId,
+      callsign: targetCallsign,
+      range,
+      count: fallbackReadings.length,
+      data: fallbackReadings,
+      dbStatus: getDbStatus()
+    });
+  } catch (err) {
+    console.warn('⚠️ [API Telemetry History Warning]:', err.message);
+    const fallbackReadings = db.getPodReadings(targetPodId);
+    return res.json({
+      success: true,
+      source: 'runtime_fallback',
+      podId: targetPodId,
+      callsign: targetCallsign,
+      range,
+      count: fallbackReadings.length,
+      data: fallbackReadings,
+      error: err.message
+    });
+  }
+});
+
+
 // Rate limit / spam prevention store for contact submissions
 const contactRateLimit = new Map();
 
@@ -1124,5 +1195,12 @@ if ((isDirectExecution || process.env.RENDER || process.env.PORT) && process.env
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 AeroSpace API Backend running on http://0.0.0.0:${PORT}`);
     console.log(`📡 Socket.io WebSocket server mounted on http://0.0.0.0:${PORT}`);
+    testConnection().then((status) => {
+      if (status.connected) {
+        console.log(`🐘 [PostgreSQL] Connected to local database: ${status.database}`);
+      } else {
+        console.log(`ℹ️ [PostgreSQL] Local offline mode: ${status.message || status.error || 'Running runtime fallback'}`);
+      }
+    }).catch(() => {});
   });
 }

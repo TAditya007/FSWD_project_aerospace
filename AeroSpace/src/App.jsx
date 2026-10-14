@@ -4,6 +4,7 @@ import Home           from './pages/Home';
 import Login          from './pages/Login';
 import Signup         from './pages/Signup';
 import PaymentGateway from './pages/PaymentGateway';
+import SignalDash     from './pages/SignalDash';
 import UserDashboard  from './pages/user/UserDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AuthenticatedLayout from './components/AuthenticatedLayout';
@@ -16,11 +17,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* ── Public Routes (Independent Space/Earth System) ── */}
-        <Route path="/"          element={<Home />} />
-        <Route path="/login"     element={<Login />} />
-        <Route path="/signup"    element={<Signup />} />
-        <Route path="/payment"   element={<PaymentGateway />} />
-        <Route path="/checkout"  element={<PaymentGateway />} />
+        <Route path="/"            element={<Home />} />
+        <Route path="/login"       element={<Login />} />
+        <Route path="/signup"      element={<Signup />} />
+        <Route path="/payment"     element={<PaymentGateway />} />
+        <Route path="/checkout"    element={<PaymentGateway />} />
+        <Route path="/signaldash"  element={<SignalDash />} />
 
         {/* ── User Protected Routes (Continuous Space Mission Control) ── */}
         <Route
